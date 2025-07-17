@@ -1,8 +1,12 @@
-require('dotenv').config();
+require('dotenv').config({ path: __dirname + '/.env' });
 const express = require('express');
 const sql = require('mssql');
+
 const app = express();
 app.use(express.json());
+
+// Serve static frontend files
+require('./serve-frontend')(app);
 
 const config = {
   user: process.env.AZURE_SQL_USERNAME,
