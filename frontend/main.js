@@ -2,6 +2,56 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('service-worker.js');
 }
 
+// Frontend logging function that sends logs to backend
+function frontendLog(message, level = 'INFO', source = 'FRONTEND') {
+  // Send to backend database
+  fetch('/api/logs', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ message, level, source })
+  }).catch(err => {
+    // Fallback to console if backend is unavailable
+    console.error('Failed to send log to backend:', err);
+    console.log(`[${level}] [${source}] ${message}`);
+  });
+  
+  // Also log to console for immediate visibility
+  const formattedMessage = `[${new Date().toISOString()}] [${level}] [${source}] ${message}`;
+  switch (level.toUpperCase()) {
+    case 'ERROR':
+      console.error(formattedMessage);
+      break;
+    case 'WARN':
+      console.warn(formattedMessage);
+      break;
+    default:
+      console.log(formattedMessage);
+  }
+}
+
+// Override console methods to capture all frontend logs
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+console.log = function(...args) {
+  const message = args.join(' ');
+  frontendLog(message, 'INFO', 'FRONTEND_CONSOLE');
+  originalConsoleLog.apply(console, args);
+};
+
+console.error = function(...args) {
+  const message = args.join(' ');
+  frontendLog(message, 'ERROR', 'FRONTEND_CONSOLE');
+  originalConsoleError.apply(console, args);
+};
+
+console.warn = function(...args) {
+  const message = args.join(' ');
+  frontendLog(message, 'WARN', 'FRONTEND_CONSOLE');
+  originalConsoleWarn.apply(console, args);
+};
+
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const chartCanvas = document.getElementById('chart');
@@ -34,11 +84,18 @@ function getDeviceId() {
   if (!id) {
     id = crypto.randomUUID();
     localStorage.setItem('device_id', id);
+    frontendLog(`Generated new device ID: ${id}`, 'INFO', 'DEVICE');
     fetch('/api/register', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ device_id: id })
+    }).then(() => {
+      frontendLog(`Device registered successfully: ${id}`, 'INFO', 'DEVICE');
+    }).catch(err => {
+      frontendLog(`Device registration failed: ${err.message}`, 'ERROR', 'DEVICE');
     });
+  } else {
+    frontendLog(`Using existing device ID: ${id}`, 'INFO', 'DEVICE');
   }
   return id;
 }
@@ -48,12 +105,20 @@ function openDb() {
   request.onupgradeneeded = function(e) {
     const db = e.target.result;
     db.createObjectStore('measurements', {keyPath:'id', autoIncrement: true});
+    frontendLog('IndexedDB created/upgraded', 'INFO', 'DATABASE');
   };
-  request.onsuccess = function(e) { db = e.target.result; };
+  request.onsuccess = function(e) { 
+    db = e.target.result;
+    frontendLog('IndexedDB connection established', 'INFO', 'DATABASE');
+  };
+  request.onerror = function(e) {
+    frontendLog(`IndexedDB connection failed: ${e.target.error}`, 'ERROR', 'DATABASE');
+  };
 }
 
 function startRecording() {
   if (recording) return;
+  frontendLog('Starting recording session', 'INFO', 'RECORDING');
   requestPermissions().then(() => {
     bias = {x:0,y:0,z:0};
     sampleBuffer = [];
@@ -65,16 +130,21 @@ function startRecording() {
     stopBtn.disabled = false;
     watchId = navigator.geolocation.watchPosition(onPosition);
     window.addEventListener('devicemotion', onMotion);
+    frontendLog('Recording session started successfully', 'INFO', 'RECORDING');
+  }).catch(err => {
+    frontendLog(`Failed to start recording: ${err.message}`, 'ERROR', 'RECORDING');
   });
 }
 
 function stopRecording() {
   if (!recording) return;
+  frontendLog('Stopping recording session', 'INFO', 'RECORDING');
   navigator.geolocation.clearWatch(watchId);
   window.removeEventListener('devicemotion', onMotion);
   recording = false;
   startBtn.disabled = false;
   stopBtn.disabled = true;
+  frontendLog('Recording session stopped', 'INFO', 'RECORDING');
 }
 
 function requestPermissions() {
@@ -134,6 +204,14 @@ function uploadRecord(rec) {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify(rec)
+  }).then(response => {
+    if (response.ok) {
+      frontendLog(`Data uploaded successfully - roughness: ${rec.roughness}`, 'INFO', 'UPLOAD');
+    } else {
+      frontendLog(`Data upload failed with status: ${response.status}`, 'ERROR', 'UPLOAD');
+    }
+  }).catch(err => {
+    frontendLog(`Data upload error: ${err.message}`, 'ERROR', 'UPLOAD');
   });
 }
 
@@ -178,10 +256,35 @@ function fetchLogs(){
   fetch('/api/logs')
     .then(r=>r.json())
     .then(list=>{
-      logDiv.innerHTML = list.map(l=>`<div>${new Date(l.log_time).toLocaleString()} - ${l.message}</div>`).join('');
+      logDiv.innerHTML = list.map(l => {
+        const time = new Date(l.log_time).toLocaleString();
+        const levelClass = l.level ? l.level.toLowerCase() : 'info';
+        const source = l.source ? `[${l.source}]` : '';
+        return `<div class="log-entry log-${levelClass}">
+          <span class="log-time">${time}</span>
+          <span class="log-source">${source}</span>
+          <span class="log-level">[${l.level || 'INFO'}]</span>
+          <span class="log-message">${l.message}</span>
+        </div>`;
+      }).join('');
       logDiv.scrollTop = logDiv.scrollHeight;
+    })
+    .catch(err => {
+      frontendLog(`Failed to fetch logs: ${err.message}`, 'ERROR', 'LOG_FETCH');
     });
 }
 
 setInterval(fetchLogs, 5000);
 fetchLogs();
+
+// Global error handling
+window.addEventListener('error', function(event) {
+  frontendLog(`Unhandled error: ${event.error?.message || event.message} at ${event.filename}:${event.lineno}:${event.colno}`, 'ERROR', 'GLOBAL_ERROR');
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+  frontendLog(`Unhandled promise rejection: ${event.reason}`, 'ERROR', 'PROMISE_REJECTION');
+});
+
+// Log application startup
+frontendLog('RCI Application initialized', 'INFO', 'STARTUP');

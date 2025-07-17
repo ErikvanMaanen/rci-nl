@@ -1,4 +1,46 @@
 body { font-family: Arial, sans-serif; margin: 20px; }
 #controls { margin-bottom: 10px; }
 canvas { border: 1px solid #ccc; }
-.log { margin-top: 10px; border: 1px solid #ccc; height: 150px; overflow-y: auto; font-size: 12px; padding: 5px; }
+.log { 
+  margin-top: 10px; 
+  border: 1px solid #ccc; 
+  height: 150px; 
+  overflow-y: auto; 
+  font-size: 12px; 
+  padding: 5px; 
+  background-color: #f9f9f9;
+}
+
+.log-entry {
+  margin-bottom: 2px;
+  padding: 2px;
+  border-left: 3px solid #ddd;
+}
+
+.log-info { border-left-color: #2196F3; }
+.log-warn { border-left-color: #FF9800; background-color: #fff3e0; }
+.log-error { border-left-color: #F44336; background-color: #ffebee; }
+
+.log-time { 
+  color: #666; 
+  font-weight: bold; 
+  margin-right: 8px;
+}
+
+.log-source { 
+  color: #9C27B0; 
+  font-weight: bold; 
+  margin-right: 8px;
+  font-size: 10px;
+}
+
+.log-level { 
+  color: #333; 
+  font-weight: bold; 
+  margin-right: 8px;
+  font-size: 10px;
+}
+
+.log-message { 
+  color: #333; 
+}
