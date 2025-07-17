@@ -44,3 +44,10 @@ canvas { border: 1px solid #ccc; }
 .log-message { 
   color: #333; 
 }
+
+.status-dot {
+  font-size: 20px;
+  vertical-align: middle;
+  margin-right: 2px;
+  transition: color 0.2s;
+}

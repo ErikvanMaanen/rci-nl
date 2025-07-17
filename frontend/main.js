@@ -73,7 +73,29 @@ const stopBtn = document.getElementById('stopBtn');
 const chartCanvas = document.getElementById('chart');
 const ctx = chartCanvas.getContext('2d');
 const logDiv = document.getElementById('log');
+const locationStatus = document.getElementById('locationStatus');
+const dbStatus = document.getElementById('dbStatus');
+// ...existing code...
 let chartData = [];
+// --- Status Indicator Helpers ---
+function setLocationStatus(ok) {
+  if (locationStatus) {
+    locationStatus.style.color = ok ? '#4CAF50' : '#F44336';
+    locationStatus.textContent = ok ? 'Locatie OK' : 'Locatie FOUT';
+    locationStatus.title = ok ? 'Locatie ontvangen' : 'Locatie niet beschikbaar';
+  }
+}
+
+function setDbStatus(ok) {
+  if (dbStatus) {
+    dbStatus.style.color = ok ? '#4CAF50' : '#F44336';
+    dbStatus.textContent = ok ? 'Database OK' : 'Database FOUT';
+    dbStatus.title = ok ? 'Database verbinding OK' : 'Database niet bereikbaar';
+  }
+}
+
+setLocationStatus(false); // Default: not receiving
+setDbStatus(false); // Default: not connected
 
 let watchId;
 let recording = false;
@@ -143,11 +165,22 @@ function startRecording() {
     recording = true;
     startBtn.disabled = true;
     stopBtn.disabled = false;
-    watchId = navigator.geolocation.watchPosition(onPosition);
+    watchId = navigator.geolocation.watchPosition(
+      pos => {
+        setLocationStatus(true);
+        onPosition(pos);
+      },
+      err => {
+        setLocationStatus(false);
+        frontendLog('Locatie fout: ' + err.message, 'ERROR', 'LOCATION');
+      },
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
+    );
     window.addEventListener('devicemotion', onMotion);
     // Don't log successful start to reduce spam
   }).catch(err => {
-    frontendLog(`Failed to start recording: ${err.message}`, 'ERROR', 'RECORDING');
+    setLocationStatus(false);
+    frontendLog(`Locatie permissie geweigerd: ${err}`, 'ERROR', 'LOCATION');
   });
 }
 
@@ -159,6 +192,7 @@ function stopRecording() {
   recording = false;
   startBtn.disabled = false;
   stopBtn.disabled = true;
+  setLocationStatus(false);
   frontendLog('Recording session stopped', 'INFO', 'RECORDING');
 }
 
@@ -170,6 +204,7 @@ function requestPermissions() {
 }
 
 function onPosition(pos) {
+  setLocationStatus(true);
   if (lastPos) {
     distance += haversine(lastPos.coords.latitude, lastPos.coords.longitude, pos.coords.latitude, pos.coords.longitude);
   }
@@ -270,6 +305,7 @@ function fetchLogs(){
   fetch('/api/logs')
     .then(r=>r.json())
     .then(list=>{
+      // Add new log lines to the bottom
       logDiv.innerHTML = list.map(l => {
         const time = new Date(l.log_time).toLocaleString();
         const levelClass = l.level ? l.level.toLowerCase() : 'info';
@@ -281,6 +317,7 @@ function fetchLogs(){
           <span class="log-message">${l.message}</span>
         </div>`;
       }).join('');
+      // Scroll to bottom to show latest log
       logDiv.scrollTop = logDiv.scrollHeight;
     })
     .catch(err => {
@@ -288,8 +325,26 @@ function fetchLogs(){
     });
 }
 
+
+// --- Database Status Polling ---
+async function checkDbStatus() {
+  try {
+    // Use logs endpoint as a simple DB check
+    const resp = await fetch('/api/logs?limit=1');
+    if (resp.ok) {
+      setDbStatus(true);
+    } else {
+      setDbStatus(false);
+    }
+  } catch (e) {
+    setDbStatus(false);
+  }
+}
+
 setInterval(fetchLogs, 5000);
+setInterval(checkDbStatus, 5000);
 fetchLogs();
+checkDbStatus();
 
 // Global error handling
 window.addEventListener('error', function(event) {
