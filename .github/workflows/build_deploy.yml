@@ -1,28 +1,18 @@
-name: Merge PR, Build and Deploy
+name: Build and Deploy
 
 on:
-  pull_request:
+  push:
+    branches:
+      - main
 
 jobs:
-  merge-build-deploy:
+  build-deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
-
-
-      - name: Merge pull request into main
-        if: github.event.pull_request.merged == false
-        uses: peter-evans/merge-pull-request@v4
-        with:
-          merge-method: squash
-
-      - uses: actions/checkout@v4
-        with:
-          ref: main
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
