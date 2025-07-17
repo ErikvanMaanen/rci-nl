@@ -1,6 +1,18 @@
 // Centralized logging module for the RCI-NL application
 const sql = require('mssql');
 
+let databaseReady = false;
+
+// Function to check if database is ready
+function isDatabaseReady() {
+  return databaseReady && sql.connected;
+}
+
+// Function to mark database as ready (called from index.js after connection)
+function setDatabaseReady() {
+  databaseReady = true;
+}
+
 /**
  * Centralized logging function that ensures all logs go to the database
  * @param {string} message - The log message
@@ -11,8 +23,10 @@ async function log(message, level = 'INFO', source = 'SERVER') {
   const timestamp = new Date().toISOString();
   
   try {
-    // Always log to database first
-    await sql.query`INSERT INTO logs(message, log_time, level, source) VALUES(${message}, GETDATE(), ${level}, ${source})`;
+    // Only log to database if connection is ready
+    if (isDatabaseReady()) {
+      await sql.query`INSERT INTO logs(message, log_time, level, source) VALUES(${message}, GETDATE(), ${level}, ${source})`;
+    }
     
     // Only log to console for WARN, ERROR, or important sources to reduce console spam
     if (level === 'WARN' || level === 'ERROR' || source === 'SERVER' || source === 'DATABASE') {
@@ -70,7 +84,10 @@ const logger = {
   api: (operation, details = '', level = 'INFO') => {
     const message = `API operation: ${operation}${details ? ' - ' + details : ''}`;
     return log(message, level, 'API');
-  }
+  },
+  
+  // Function to mark database as ready
+  setDatabaseReady: setDatabaseReady
 };
 
 module.exports = logger;

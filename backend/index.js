@@ -28,14 +28,26 @@ const config = {
   options: {
     encrypt: true,
     trustServerCertificate: true
+  },
+  requestTimeout: 30000, // 30 seconds
+  connectionTimeout: 30000, // 30 seconds
+  pool: {
+    max: 10,
+    min: 0,
+    idleTimeoutMillis: 30000
   }
 };
 
 const ensureTables = require('./ensure-tables');
 
+let connectionPool = null;
+
 sql.connect(config)
-  .then(async () => {
+  .then(async (pool) => {
+    connectionPool = pool;
+    logger.setDatabaseReady();
     await logger.database('Database connection established');
+    await logger.info(`Server started and listening on port ${process.env.PORT || 3000}`, 'SERVER');
     return ensureTables();
   })
   .then(async () => {
@@ -51,12 +63,13 @@ sql.connect(config)
 async function cleanupOldLogs() {
   try {
     // Keep only the last 1000 log entries
-    await sql.query`
+    const request = new sql.Request();
+    const result = await request.query(`
       DELETE FROM logs 
       WHERE id NOT IN (
         SELECT TOP 1000 id FROM logs ORDER BY log_time DESC
       )
-    `;
+    `);
     await logger.info('Old logs cleaned up', 'DATABASE');
   } catch (err) {
     await logger.error(`Failed to cleanup old logs: ${err.message}`, 'DATABASE');
@@ -111,18 +124,16 @@ app.get('/api/logs', async (req, res) => {
   // await logger.api(`Logs requested`, `IP: ${ip}, Level filter: ${level || 'all'}, Source filter: ${source || 'all'}`);
   
   try {
+    // Use parameterized query to prevent SQL injection
     let query = 'SELECT TOP (@limit) id, log_time, message, level, source FROM logs';
     const conditions = [];
-    const params = { limit: parseInt(limit) };
     
-    if (level) {
+    if (level && ['INFO', 'WARN', 'ERROR', 'DEBUG'].includes(level.toUpperCase())) {
       conditions.push('level = @level');
-      params.level = level;
     }
     
-    if (source) {
+    if (source && source.length < 100) { // Basic validation
       conditions.push('source = @source');
-      params.source = source;
     }
     
     if (conditions.length > 0) {
@@ -131,10 +142,16 @@ app.get('/api/logs', async (req, res) => {
     
     query += ' ORDER BY log_time DESC';
     
-    const request = sql.request();
-    Object.entries(params).forEach(([key, value]) => {
-      request.input(key, value);
-    });
+    const request = new sql.Request();
+    request.input('limit', sql.Int, Math.min(parseInt(limit) || 100, 1000)); // Cap at 1000
+    
+    if (level && ['INFO', 'WARN', 'ERROR', 'DEBUG'].includes(level.toUpperCase())) {
+      request.input('level', sql.NVarChar(20), level.toUpperCase());
+    }
+    
+    if (source && source.length < 100) {
+      request.input('source', sql.NVarChar(100), source);
+    }
     
     const result = await request.query(query);
     res.json(result.recordset);
@@ -147,10 +164,12 @@ app.get('/api/logs', async (req, res) => {
 // New endpoint to get log statistics
 app.get('/api/logs/stats', async (req, res) => {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  await logger.api(`Log statistics requested`, `IP: ${ip}`);
+  // Don't log stats requests to reduce spam
+  // await logger.api(`Log statistics requested`, `IP: ${ip}`);
   
   try {
-    const result = await sql.query`
+    const request = new sql.Request();
+    const result = await request.query(`
       SELECT 
         level,
         source,
@@ -159,7 +178,7 @@ app.get('/api/logs/stats', async (req, res) => {
       FROM logs 
       GROUP BY level, source
       ORDER BY count DESC
-    `;
+    `);
     res.json(result.recordset);
   } catch (err) {
     await logger.error(`Error retrieving log statistics for IP ${ip}: ${err.message}`, 'API');
@@ -198,8 +217,10 @@ app.use(async (err, req, res, next) => {
 });
 
 const port = process.env.PORT || 3000;
-const server = app.listen(port, async () => {
-  await logger.info(`Server started and listening on port ${port}`, 'SERVER');
+const server = app.listen(port, () => {
+  console.log(`[${new Date().toISOString()}] [INFO] [SERVER] Server started and listening on port ${port}`);
+  // Don't try to log to database immediately as it might not be ready yet
+  // The database connection logging will happen in the sql.connect().then() callback
 });
 
 // Graceful shutdown handling

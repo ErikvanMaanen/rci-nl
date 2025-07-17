@@ -110,9 +110,8 @@ function getDeviceId() {
     }).catch(err => {
       frontendLog(`Device registration failed: ${err.message}`, 'ERROR', 'DEVICE');
     });
-  } else {
-    frontendLog(`Using existing device ID: ${id}`, 'INFO', 'DEVICE');
   }
+  // Don't log when using existing device ID to reduce spam
   return id;
 }
 
@@ -125,7 +124,7 @@ function openDb() {
   };
   request.onsuccess = function(e) { 
     db = e.target.result;
-    frontendLog('IndexedDB connection established', 'INFO', 'DATABASE');
+    // Don't log successful connection to reduce spam
   };
   request.onerror = function(e) {
     frontendLog(`IndexedDB connection failed: ${e.target.error}`, 'ERROR', 'DATABASE');
@@ -146,7 +145,7 @@ function startRecording() {
     stopBtn.disabled = false;
     watchId = navigator.geolocation.watchPosition(onPosition);
     window.addEventListener('devicemotion', onMotion);
-    frontendLog('Recording session started successfully', 'INFO', 'RECORDING');
+    // Don't log successful start to reduce spam
   }).catch(err => {
     frontendLog(`Failed to start recording: ${err.message}`, 'ERROR', 'RECORDING');
   });
@@ -154,7 +153,7 @@ function startRecording() {
 
 function stopRecording() {
   if (!recording) return;
-  frontendLog('Stopping recording session', 'INFO', 'RECORDING');
+  // Don't log stopping to reduce spam
   navigator.geolocation.clearWatch(watchId);
   window.removeEventListener('devicemotion', onMotion);
   recording = false;
