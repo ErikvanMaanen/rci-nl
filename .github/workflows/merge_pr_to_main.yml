@@ -13,6 +13,6 @@ jobs:
 
     steps:
       - name: Merge pull request into main
-        uses: peter-evans/merge-pull-request@v4
+        uses: peter-evans/merge-pull-request@v3
         with:
           merge-method: squash
