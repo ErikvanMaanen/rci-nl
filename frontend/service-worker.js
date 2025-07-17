@@ -3,8 +3,10 @@ self.addEventListener('install', event => {
     caches.open('rci-cache').then(cache => cache.addAll([
       './',
       'index.html',
+      'device.html',
       'style.css',
       'main.js',
+      'device.js',
       'manifest.json'
     ]))
   );
