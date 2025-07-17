@@ -209,6 +209,24 @@ app.post('/api/logs', async (req, res) => {
   }
 });
 
+// Endpoint to retrieve measurement records for map view
+app.get('/api/rci-data', async (req, res) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const { limit = 1000 } = req.query;
+
+  try {
+    const request = new sql.Request();
+    request.input('limit', sql.Int, Math.min(parseInt(limit) || 1000, 1000));
+    const result = await request.query(
+      'SELECT TOP (@limit) timestamp, latitude, longitude, roughness FROM rci_data ORDER BY id DESC'
+    );
+    res.json(result.recordset);
+  } catch (err) {
+    await logger.error(`Error retrieving rci_data for IP ${ip}: ${err.message}`, 'API');
+    res.status(500).send('error');
+  }
+});
+
 // Global error handling middleware
 app.use(async (err, req, res, next) => {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
