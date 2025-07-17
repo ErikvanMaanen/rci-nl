@@ -6,6 +6,7 @@ const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const chartCanvas = document.getElementById('chart');
 const ctx = chartCanvas.getContext('2d');
+const logDiv = document.getElementById('log');
 let chartData = [];
 
 let watchId;
@@ -172,3 +173,15 @@ function drawChart(value){
   });
   ctx.stroke();
 }
+
+function fetchLogs(){
+  fetch('/api/logs')
+    .then(r=>r.json())
+    .then(list=>{
+      logDiv.innerHTML = list.map(l=>`<div>${new Date(l.log_time).toLocaleString()} - ${l.message}</div>`).join('');
+      logDiv.scrollTop = logDiv.scrollHeight;
+    });
+}
+
+setInterval(fetchLogs, 5000);
+fetchLogs();
