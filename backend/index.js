@@ -16,6 +16,7 @@ app.use(express.json());
 // Serve static frontend files
 require('./serve-frontend')(app);
 
+
 const config = {
   user: process.env.AZURE_SQL_USERNAME,
   password: process.env.AZURE_SQL_PASSWORD,
@@ -28,7 +29,14 @@ const config = {
   }
 };
 
-sql.connect(config).catch(err => console.error('DB connection error', err));
+const ensureTables = require('./ensure-tables');
+
+sql.connect(config)
+  .then(() => {
+    console.log('[DB] Connected');
+    return ensureTables();
+  })
+  .catch(err => console.error('DB connection error', err));
 
 app.post('/api/register', async (req, res) => {
   const { device_id } = req.body;
