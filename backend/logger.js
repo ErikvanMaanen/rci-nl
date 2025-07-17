@@ -14,21 +14,23 @@ async function log(message, level = 'INFO', source = 'SERVER') {
     // Always log to database first
     await sql.query`INSERT INTO logs(message, log_time, level, source) VALUES(${message}, GETDATE(), ${level}, ${source})`;
     
-    // Also log to console for development/debugging with enhanced formatting
-    const formattedMessage = `[${timestamp}] [${level}] [${source}] ${message}`;
-    
-    switch (level.toUpperCase()) {
-      case 'ERROR':
-        console.error(formattedMessage);
-        break;
-      case 'WARN':
-        console.warn(formattedMessage);
-        break;
-      case 'DEBUG':
-        console.debug(formattedMessage);
-        break;
-      default:
-        console.log(formattedMessage);
+    // Only log to console for WARN, ERROR, or important sources to reduce console spam
+    if (level === 'WARN' || level === 'ERROR' || source === 'SERVER' || source === 'DATABASE') {
+      const formattedMessage = `[${timestamp}] [${level}] [${source}] ${message}`;
+      
+      switch (level.toUpperCase()) {
+        case 'ERROR':
+          console.error(formattedMessage);
+          break;
+        case 'WARN':
+          console.warn(formattedMessage);
+          break;
+        case 'DEBUG':
+          console.debug(formattedMessage);
+          break;
+        default:
+          console.log(formattedMessage);
+      }
     }
   } catch (err) {
     // Fallback to console if database logging fails

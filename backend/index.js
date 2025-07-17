@@ -6,10 +6,10 @@ const logger = require('./logger');
 const app = express();
 app.use(express.json());
 
-// Request logging middleware
+// Request logging middleware - only log important API calls
 app.use(async (req, res, next) => {
-  // Only log API requests to avoid spam from static files
-  if (req.path.startsWith('/api/')) {
+  // Only log non-GET API requests to reduce spam (GET /api/logs is very frequent)
+  if (req.path.startsWith('/api/') && req.method !== 'GET') {
     await logger.request(req);
   }
   next();
@@ -40,10 +40,28 @@ sql.connect(config)
   })
   .then(async () => {
     await logger.database('Database tables ensured');
+    // Clean up old logs to prevent performance issues
+    await cleanupOldLogs();
   })
   .catch(async (err) => {
     await logger.error(`Database connection failed: ${err.message}`, 'DATABASE');
   });
+
+// Function to clean up old logs to prevent database from growing too large
+async function cleanupOldLogs() {
+  try {
+    // Keep only the last 1000 log entries
+    await sql.query`
+      DELETE FROM logs 
+      WHERE id NOT IN (
+        SELECT TOP 1000 id FROM logs ORDER BY log_time DESC
+      )
+    `;
+    await logger.info('Old logs cleaned up', 'DATABASE');
+  } catch (err) {
+    await logger.error(`Failed to cleanup old logs: ${err.message}`, 'DATABASE');
+  }
+}
 
 app.post('/api/register', async (req, res) => {
   const { device_id } = req.body;
@@ -68,14 +86,16 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/upload', async (req, res) => {
   const data = req.body;
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  await logger.api(`Data upload attempt from device ${data.device_id}`, `IP: ${ip}`);
+  // Don't log every upload attempt to reduce spam
+  // await logger.api(`Data upload attempt from device ${data.device_id}`, `IP: ${ip}`);
   
   try {
     await sql.query`
       INSERT INTO rci_data(timestamp, latitude, longitude, speed, direction, roughness, distance_m, device_id, ip_address, z_values, avg_speed, interval_s, algorithm_version)
       VALUES(${data.timestamp}, ${data.latitude}, ${data.longitude}, ${data.speed}, ${data.direction}, ${data.roughness}, ${data.distance_m}, ${data.device_id}, ${ip}, ${JSON.stringify(data.z_values)}, ${data.avg_speed}, ${data.interval_s}, ${data.algorithm_version})
     `;
-    await logger.api(`Successfully uploaded data from device ${data.device_id}`, `roughness: ${data.roughness}, distance: ${data.distance_m}m`);
+    // Don't log every successful upload to reduce spam
+    // await logger.api(`Successfully uploaded data from device ${data.device_id}`, `roughness: ${data.roughness}, distance: ${data.distance_m}m`);
     res.sendStatus(200);
   } catch (err) {
     await logger.error(`Error uploading data from device ${data.device_id} at IP ${ip}: ${err.message}`, 'API');
@@ -87,7 +107,8 @@ app.get('/api/logs', async (req, res) => {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   const { level, source, limit = 100 } = req.query;
   
-  await logger.api(`Logs requested`, `IP: ${ip}, Level filter: ${level || 'all'}, Source filter: ${source || 'all'}`);
+  // Don't log every log request to avoid spam
+  // await logger.api(`Logs requested`, `IP: ${ip}, Level filter: ${level || 'all'}, Source filter: ${source || 'all'}`);
   
   try {
     let query = 'SELECT TOP (@limit) id, log_time, message, level, source FROM logs';
@@ -151,8 +172,13 @@ app.post('/api/logs', async (req, res) => {
   const { message, level = 'INFO', source = 'FRONTEND' } = req.body;
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   
-  if (!message) {
+  if (!message || message.trim() === '') {
     return res.status(400).json({ error: 'Message is required' });
+  }
+  
+  // Skip empty or repetitive messages
+  if (message.length < 3 || message.match(/^\[20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+    return res.sendStatus(200);
   }
   
   try {

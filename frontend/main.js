@@ -4,53 +4,69 @@ if ('serviceWorker' in navigator) {
 
 // Frontend logging function that sends logs to backend
 function frontendLog(message, level = 'INFO', source = 'FRONTEND') {
-  // Send to backend database
-  fetch('/api/logs', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ message, level, source })
-  }).catch(err => {
-    // Fallback to console if backend is unavailable
-    console.error('Failed to send log to backend:', err);
-    console.log(`[${level}] [${source}] ${message}`);
-  });
+  // Skip empty or trivial messages
+  if (!message || message.trim() === '' || message.length < 3) {
+    return;
+  }
   
-  // Also log to console for immediate visibility
-  const formattedMessage = `[${new Date().toISOString()}] [${level}] [${source}] ${message}`;
-  switch (level.toUpperCase()) {
-    case 'ERROR':
-      console.error(formattedMessage);
-      break;
-    case 'WARN':
-      console.warn(formattedMessage);
-      break;
-    default:
-      console.log(formattedMessage);
+  // Skip repetitive timestamp-only messages
+  if (message.match(/^\[20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+    return;
+  }
+  
+  // Send to backend database (only for important messages)
+  if (level !== 'INFO' || source !== 'FRONTEND_CONSOLE') {
+    fetch('/api/logs', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ message, level, source })
+    }).catch(err => {
+      // Use original console methods to avoid recursion
+      originalConsoleError('Failed to send log to backend:', err);
+    });
+  }
+  
+  // Only log important messages to console to avoid spam
+  if (level === 'ERROR' || level === 'WARN' || source !== 'FRONTEND_CONSOLE') {
+    const formattedMessage = `[${level}] [${source}] ${message}`;
+    switch (level.toUpperCase()) {
+      case 'ERROR':
+        originalConsoleError(formattedMessage);
+        break;
+      case 'WARN':
+        originalConsoleWarn(formattedMessage);
+        break;
+      default:
+        if (source !== 'FRONTEND_CONSOLE') {
+          originalConsoleLog(formattedMessage);
+        }
+    }
   }
 }
 
-// Override console methods to capture all frontend logs
+// Override console methods to capture only important frontend logs
 const originalConsoleLog = console.log;
 const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
 
-console.log = function(...args) {
-  const message = args.join(' ');
-  frontendLog(message, 'INFO', 'FRONTEND_CONSOLE');
-  originalConsoleLog.apply(console, args);
-};
-
+// Only capture console.error and console.warn, not regular console.log to reduce spam
 console.error = function(...args) {
   const message = args.join(' ');
-  frontendLog(message, 'ERROR', 'FRONTEND_CONSOLE');
+  if (message && message.trim() !== '') {
+    frontendLog(message, 'ERROR', 'FRONTEND_CONSOLE');
+  }
   originalConsoleError.apply(console, args);
 };
 
 console.warn = function(...args) {
   const message = args.join(' ');
-  frontendLog(message, 'WARN', 'FRONTEND_CONSOLE');
+  if (message && message.trim() !== '') {
+    frontendLog(message, 'WARN', 'FRONTEND_CONSOLE');
+  }
   originalConsoleWarn.apply(console, args);
 };
+
+// Don't override console.log to prevent logging spam
 
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
@@ -205,11 +221,10 @@ function uploadRecord(rec) {
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify(rec)
   }).then(response => {
-    if (response.ok) {
-      frontendLog(`Data uploaded successfully - roughness: ${rec.roughness}`, 'INFO', 'UPLOAD');
-    } else {
+    if (!response.ok) {
       frontendLog(`Data upload failed with status: ${response.status}`, 'ERROR', 'UPLOAD');
     }
+    // Don't log successful uploads to reduce spam - they happen very frequently
   }).catch(err => {
     frontendLog(`Data upload error: ${err.message}`, 'ERROR', 'UPLOAD');
   });
