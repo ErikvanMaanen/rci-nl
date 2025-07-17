@@ -13,17 +13,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+
       - name: Merge pull request into main
         if: github.event.pull_request.merged == false
-        uses: actions/github-script@v6
+        uses: peter-evans/merge-pull-request@v4
         with:
-          script: |
-            await github.pulls.merge({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number,
-              merge_method: 'squash'
-            });
+          merge-method: squash
 
       - uses: actions/checkout@v4
         with:
