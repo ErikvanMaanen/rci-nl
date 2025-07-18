@@ -14,6 +14,7 @@
   "roughnessLabel": "roughness",
   "deviceNickname": "Device nickname:",
   "saveNickname": "Save",
+  "deviceSelect": "Select device(s):",
   "navHome": "Home",
   "navMap": "Map",
   "navMaintenance": "Maintenance"
