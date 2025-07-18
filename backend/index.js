@@ -26,7 +26,9 @@ const ensureTables = require('./ensure-tables');
 // Connect to the database and prepare tables
 database.initializeDatabase()
   .then(async () => {
-    // Database is now ready, no need to call setDatabaseReady again
+    // Database is now ready, wait a moment for connection to fully establish
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     await logger.database('Database connection established');
     await logger.info(`Server started and listening on port ${process.env.PORT || 3000}`, 'SERVER');
     return ensureTables();
@@ -152,6 +154,24 @@ app.get('/api/logs/stats', async (req, res) => {
   } catch (err) {
     await logger.error(`Error retrieving log statistics for IP ${ip}: ${err.message}`, 'API');
     res.status(500).send('error');
+  }
+});
+
+// New endpoint to get database schema status (for maintenance)
+app.get('/api/schema/status', async (req, res) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  await logger.api(`Schema status requested`, `IP: ${ip}`);
+  
+  try {
+    const status = await database.getSchemaStatus();
+    res.json(status);
+  } catch (err) {
+    await logger.error(`Error retrieving schema status for IP ${ip}: ${err.message}`, 'API');
+    res.status(500).json({ 
+      ready: false, 
+      error: 'Failed to retrieve schema status',
+      details: err.message
+    });
   }
 });
 

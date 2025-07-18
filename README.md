@@ -50,6 +50,25 @@ Daarnaast wordt de tabel `RIBS_Data` gebruikt om meetgegevens op te slaan:
 | `avg_speed`     | FLOAT NOT NULL | gemiddelde snelheid |
 | `interval_s`    | FLOAT NOT NULL | meetinterval in seconden |
 | `algorithm_version` | NVARCHAR(50) NOT NULL | versie van algoritme |
+| `vdv`           | FLOAT NULL | Vibration Dose Value (4e macht methode) |
+| `crest_factor`  | FLOAT NULL | Piek-naar-RMS verhouding |
+
+## Database Schema Management
+
+Het systeem bevat automatisch schema-beheer en migratie ondersteuning:
+
+- **Huidige Schema Versie**: 1.2.0
+- **Automatische Migraties**: Schema wordt automatisch bijgewerkt bij opstarten
+- **Versie Tracking**: `schema_version` tabel houdt alle wijzigingen bij
+- **Backwards Compatibility**: Ondersteunt upgrades van oudere versies
+
+### Schema Versie Geschiedenis
+
+- **v1.0.0**: Basis tabellen (devices, logs, RIBS_Data)
+- **v1.1.0**: Performance indexes toegevoegd
+- **v1.2.0**: VDV en crest_factor metingen toegevoegd
+
+Voor volledige schema documentatie, zie `backend/SCHEMA.md`.
 
 ## Installatie Backend
 

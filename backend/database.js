@@ -4,6 +4,87 @@ const sql = require('mssql');
 let connectionPool = null;
 let databaseReady = false;
 
+// Database schema version for migration tracking
+const CURRENT_SCHEMA_VERSION = '1.2.0';
+
+/**
+ * DATABASE SCHEMA DOCUMENTATION
+ * 
+ * This section documents all tables and their schemas for the RIBS Tracker application.
+ * Each table includes its purpose, columns, indexes, and relationships.
+ */
+
+/**
+ * TABLE: devices
+ * Purpose: Store registered device information and nicknames
+ * 
+ * Columns:
+ * - id (NVARCHAR(100), PRIMARY KEY): Unique device identifier (UUID)
+ * - registered_at (DATETIME, NOT NULL): When the device was first registered
+ * - nickname (NVARCHAR(100), NULL): User-friendly name for the device
+ * 
+ * Indexes: Primary key on id
+ * Relationships: Referenced by RIBS_Data.device_id
+ */
+
+/**
+ * TABLE: logs
+ * Purpose: Store application logs from all sources (server, frontend, API, etc.)
+ * 
+ * Columns:
+ * - id (INT IDENTITY(1,1), PRIMARY KEY): Auto-incrementing log entry ID
+ * - message (NVARCHAR(MAX), NOT NULL): The log message content
+ * - log_time (DATETIME, NOT NULL): Timestamp when the log was created
+ * - level (NVARCHAR(20), DEFAULT 'INFO'): Log level (INFO, WARN, ERROR, DEBUG)
+ * - source (NVARCHAR(100), NULL): Source of the log (SERVER, API, DATABASE, FRONTEND, etc.)
+ * 
+ * Indexes:
+ * - Primary key on id
+ * - IX_logs_time_level on (log_time DESC, level) for efficient querying
+ * 
+ * Notes: Includes automatic cleanup to prevent unlimited growth
+ */
+
+/**
+ * TABLE: RIBS_Data
+ * Purpose: Store roughness measurement data collected from devices
+ * 
+ * Columns:
+ * - id (INT IDENTITY(1,1), PRIMARY KEY): Auto-incrementing measurement ID
+ * - timestamp (NVARCHAR(50), NOT NULL): ISO timestamp of the measurement
+ * - latitude (FLOAT, NOT NULL): GPS latitude coordinate
+ * - longitude (FLOAT, NOT NULL): GPS longitude coordinate
+ * - speed (FLOAT, NOT NULL): Instantaneous speed at measurement time (m/s)
+ * - direction (FLOAT, NOT NULL): Heading/direction of travel (degrees)
+ * - roughness (FLOAT, NOT NULL): Calculated roughness index (RMS acceleration)
+ * - distance_m (FLOAT, NOT NULL): Total distance traveled by device (meters)
+ * - device_id (NVARCHAR(100), NOT NULL): Reference to devices.id
+ * - ip_address (NVARCHAR(45), NOT NULL): IP address of the uploading client
+ * - z_values (NVARCHAR(MAX), NOT NULL): JSON array of raw Z-axis acceleration values
+ * - avg_speed (FLOAT, NOT NULL): Average speed during measurement window (m/s)
+ * - interval_s (FLOAT, NOT NULL): Duration of measurement window (seconds)
+ * - algorithm_version (NVARCHAR(50), NOT NULL): Version of processing algorithm used
+ * - vdv (FLOAT, NULL): Vibration Dose Value (4th power method) - NEW in v1.2.0
+ * - crest_factor (FLOAT, NULL): Peak-to-RMS ratio - NEW in v1.2.0
+ * 
+ * Indexes:
+ * - Primary key on id
+ * - IX_ribs_device_time on (device_id, timestamp) for device-specific queries
+ * - IX_ribs_location on (latitude, longitude) for spatial queries
+ * 
+ * Relationships: device_id references devices.id
+ */
+
+/**
+ * TABLE: schema_version
+ * Purpose: Track database schema version for migrations
+ * 
+ * Columns:
+ * - version (NVARCHAR(20), PRIMARY KEY): Schema version string
+ * - applied_at (DATETIME, NOT NULL): When this version was applied
+ * - description (NVARCHAR(255), NULL): Description of changes in this version
+ */
+
 // Database configuration
 const config = {
   user: process.env.AZURE_SQL_USERNAME,
@@ -45,7 +126,7 @@ async function initializeDatabase() {
  * @returns {boolean}
  */
 function isDatabaseReady() {
-  return databaseReady && sql.connected && connectionPool;
+  return databaseReady && connectionPool && connectionPool.connected;
 }
 
 /**
@@ -101,16 +182,43 @@ async function query(strings, ...values) {
 // ===== TABLE CREATION FUNCTIONS =====
 
 /**
- * Ensure all required tables exist
+ * Ensure all required tables exist and are up-to-date
  */
 async function ensureTables() {
+  await ensureSchemaVersionTable();
   await ensureDevicesTable();
   await ensureLogsTable();
   await ensureRibsDataTable();
+  await applySchemaUpgrades();
 }
 
 /**
- * Ensure devices table exists with nickname column
+ * Ensure schema version tracking table exists
+ */
+async function ensureSchemaVersionTable() {
+  const createSchemaVersion = `
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='schema_version' AND xtype='U')
+    CREATE TABLE schema_version (
+      version NVARCHAR(20) PRIMARY KEY,
+      applied_at DATETIME NOT NULL,
+      description NVARCHAR(255) NULL
+    );
+  `;
+
+  await executeQuery(createSchemaVersion);
+  
+  // Insert current version if not exists
+  const insertCurrentVersion = `
+    IF NOT EXISTS (SELECT * FROM schema_version WHERE version = @version)
+    INSERT INTO schema_version (version, applied_at, description) 
+    VALUES (@version, GETDATE(), 'Initial schema version');
+  `;
+  
+  await executeQuery(insertCurrentVersion, { version: CURRENT_SCHEMA_VERSION });
+}
+
+/**
+ * Ensure devices table exists with all required columns
  */
 async function ensureDevicesTable() {
   const createDevices = `
@@ -137,7 +245,7 @@ async function ensureDevicesTable() {
 }
 
 /**
- * Ensure logs table exists with index
+ * Ensure logs table exists with proper indexes
  */
 async function ensureLogsTable() {
   const createLogs = `
@@ -161,7 +269,7 @@ async function ensureLogsTable() {
 }
 
 /**
- * Ensure RIBS_Data table exists
+ * Ensure RIBS_Data table exists with all required columns and indexes
  */
 async function ensureRibsDataTable() {
   const createRibsData = `
@@ -180,11 +288,139 @@ async function ensureRibsDataTable() {
       z_values NVARCHAR(MAX) NOT NULL,
       avg_speed FLOAT NOT NULL,
       interval_s FLOAT NOT NULL,
-      algorithm_version NVARCHAR(50) NOT NULL
+      algorithm_version NVARCHAR(50) NOT NULL,
+      vdv FLOAT NULL,
+      crest_factor FLOAT NULL
     );
   `;
 
+  // Create indexes for efficient querying
+  const createDeviceTimeIndex = `
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_ribs_device_time' AND object_id = OBJECT_ID('RIBS_Data'))
+    CREATE INDEX IX_ribs_device_time ON RIBS_Data(device_id, timestamp);
+  `;
+
+  const createLocationIndex = `
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_ribs_location' AND object_id = OBJECT_ID('RIBS_Data'))
+    CREATE INDEX IX_ribs_location ON RIBS_Data(latitude, longitude);
+  `;
+
   await executeQuery(createRibsData);
+  await executeQuery(createDeviceTimeIndex);
+  await executeQuery(createLocationIndex);
+}
+
+/**
+ * Apply schema upgrades based on current version
+ */
+async function applySchemaUpgrades() {
+  const currentVersion = await getCurrentSchemaVersion();
+  
+  // Apply upgrades in order
+  if (compareVersions(currentVersion, '1.1.0') < 0) {
+    await applyUpgrade_1_1_0();
+  }
+  
+  if (compareVersions(currentVersion, '1.2.0') < 0) {
+    await applyUpgrade_1_2_0();
+  }
+}
+
+/**
+ * Get current schema version from database
+ */
+async function getCurrentSchemaVersion() {
+  try {
+    const result = await executeQuery(`
+      SELECT TOP 1 version FROM schema_version 
+      ORDER BY applied_at DESC
+    `);
+    return result.recordset.length > 0 ? result.recordset[0].version : '1.0.0';
+  } catch (err) {
+    return '1.0.0'; // Default to initial version if table doesn't exist
+  }
+}
+
+/**
+ * Compare two version strings (returns -1, 0, or 1)
+ */
+function compareVersions(version1, version2) {
+  const v1parts = version1.split('.').map(Number);
+  const v2parts = version2.split('.').map(Number);
+  
+  for (let i = 0; i < Math.max(v1parts.length, v2parts.length); i++) {
+    const v1part = v1parts[i] || 0;
+    const v2part = v2parts[i] || 0;
+    
+    if (v1part < v2part) return -1;
+    if (v1part > v2part) return 1;
+  }
+  
+  return 0;
+}
+
+/**
+ * Schema upgrade to version 1.1.0
+ * - Added indexes to RIBS_Data table
+ */
+async function applyUpgrade_1_1_0() {
+  try {
+    // Add device_time index if not exists
+    await executeQuery(`
+      IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_ribs_device_time' AND object_id = OBJECT_ID('RIBS_Data'))
+      CREATE INDEX IX_ribs_device_time ON RIBS_Data(device_id, timestamp);
+    `);
+    
+    // Add location index if not exists
+    await executeQuery(`
+      IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_ribs_location' AND object_id = OBJECT_ID('RIBS_Data'))
+      CREATE INDEX IX_ribs_location ON RIBS_Data(latitude, longitude);
+    `);
+    
+    // Record the upgrade
+    await executeQuery(`
+      INSERT INTO schema_version (version, applied_at, description) 
+      VALUES ('1.1.0', GETDATE(), 'Added performance indexes to RIBS_Data table');
+    `);
+  } catch (err) {
+    throw new Error(`Failed to apply upgrade 1.1.0: ${err.message}`);
+  }
+}
+
+/**
+ * Schema upgrade to version 1.2.0
+ * - Added VDV and crest_factor columns to RIBS_Data table
+ */
+async function applyUpgrade_1_2_0() {
+  try {
+    // Add VDV column if not exists
+    await executeQuery(`
+      IF NOT EXISTS (
+        SELECT * FROM sys.columns
+        WHERE Name = N'vdv'
+          AND Object_ID = Object_ID('RIBS_Data')
+      )
+      ALTER TABLE RIBS_Data ADD vdv FLOAT NULL;
+    `);
+    
+    // Add crest_factor column if not exists
+    await executeQuery(`
+      IF NOT EXISTS (
+        SELECT * FROM sys.columns
+        WHERE Name = N'crest_factor'
+          AND Object_ID = Object_ID('RIBS_Data')
+      )
+      ALTER TABLE RIBS_Data ADD crest_factor FLOAT NULL;
+    `);
+    
+    // Record the upgrade
+    await executeQuery(`
+      INSERT INTO schema_version (version, applied_at, description) 
+      VALUES ('1.2.0', GETDATE(), 'Added VDV and crest_factor columns to RIBS_Data table');
+    `);
+  } catch (err) {
+    throw new Error(`Failed to apply upgrade 1.2.0: ${err.message}`);
+  }
 }
 
 // ===== LOG OPERATIONS =====
@@ -353,9 +589,13 @@ async function insertRibsData(data, ipAddress) {
     throw new Error('Database not ready');
   }
 
+  // Extract VDV and crest_factor from data (new in v1.2.0)
+  const vdv = data.vdv || null;
+  const crest_factor = data.crest_factor || null;
+
   await query`
-    INSERT INTO RIBS_Data(timestamp, latitude, longitude, speed, direction, roughness, distance_m, device_id, ip_address, z_values, avg_speed, interval_s, algorithm_version)
-    VALUES(${data.timestamp}, ${data.latitude}, ${data.longitude}, ${data.speed}, ${data.direction}, ${data.roughness}, ${data.distance_m}, ${data.device_id}, ${ipAddress}, ${JSON.stringify(data.z_values)}, ${data.avg_speed}, ${data.interval_s}, ${data.algorithm_version})
+    INSERT INTO RIBS_Data(timestamp, latitude, longitude, speed, direction, roughness, distance_m, device_id, ip_address, z_values, avg_speed, interval_s, algorithm_version, vdv, crest_factor)
+    VALUES(${data.timestamp}, ${data.latitude}, ${data.longitude}, ${data.speed}, ${data.direction}, ${data.roughness}, ${data.distance_m}, ${data.device_id}, ${ipAddress}, ${JSON.stringify(data.z_values)}, ${data.avg_speed}, ${data.interval_s}, ${data.algorithm_version}, ${vdv}, ${crest_factor})
   `;
 }
 
@@ -391,6 +631,58 @@ async function getRibsData(options = {}) {
   return result.recordset;
 }
 
+/**
+ * Get database schema status and information
+ * @returns {Promise<Object>} Schema status information
+ */
+async function getSchemaStatus() {
+  if (!isDatabaseReady()) {
+    return {
+      ready: false,
+      error: 'Database not ready'
+    };
+  }
+
+  try {
+    const currentVersion = await getCurrentSchemaVersion();
+    const tablesResult = await executeQuery(`
+      SELECT TABLE_NAME 
+      FROM INFORMATION_SCHEMA.TABLES 
+      WHERE TABLE_TYPE = 'BASE TABLE'
+      ORDER BY TABLE_NAME
+    `);
+    
+    const indexesResult = await executeQuery(`
+      SELECT 
+        t.name AS table_name,
+        i.name AS index_name,
+        i.type_desc AS index_type
+      FROM sys.indexes i
+      INNER JOIN sys.tables t ON i.object_id = t.object_id
+      WHERE i.name IS NOT NULL
+      ORDER BY t.name, i.name
+    `);
+
+    return {
+      ready: true,
+      currentVersion,
+      targetVersion: CURRENT_SCHEMA_VERSION,
+      upToDate: currentVersion === CURRENT_SCHEMA_VERSION,
+      tables: tablesResult.recordset.map(r => r.TABLE_NAME),
+      indexes: indexesResult.recordset.map(r => ({
+        table: r.table_name,
+        name: r.index_name,
+        type: r.index_type
+      }))
+    };
+  } catch (error) {
+    return {
+      ready: false,
+      error: error.message
+    };
+  }
+}
+
 // ===== GRACEFUL SHUTDOWN =====
 
 /**
@@ -418,9 +710,12 @@ module.exports = {
   
   // Table management
   ensureTables,
+  ensureSchemaVersionTable,
   ensureDevicesTable,
   ensureLogsTable,
   ensureRibsDataTable,
+  applySchemaUpgrades,
+  getCurrentSchemaVersion,
   
   // Log operations
   insertLog,
@@ -437,6 +732,12 @@ module.exports = {
   insertRibsData,
   getRibsData,
   
+  // Schema management
+  getSchemaStatus,
+  
   // SQL types (for compatibility)
-  sql
+  sql,
+  
+  // Schema version
+  CURRENT_SCHEMA_VERSION
 };

@@ -28,7 +28,13 @@
     <li><code>GET /api/logs/stats</code> - Summary statistics of logs</li>
     <li><code>POST /api/logs</code> - Receive frontend log messages</li>
     <li><code>GET /api/rci-data</code> - Retrieve measurement records for the map</li>
+    <li><code>GET /api/schema/status</code> - Database schema status and version info</li>
   </ul>
+
+  <h2>Database Schema</h2>
+  <div id="schema-status">
+    <p>Loading schema information...</p>
+  </div>
 
   <h2>Main Functions</h2>
   <ul>
@@ -53,5 +59,52 @@
   <div id="log" class="log"></div>
   <script src="i18n.js"></script>
   <script src="logs.js"></script>
+  <script>
+    // Load schema status information
+    async function loadSchemaStatus() {
+      try {
+        const response = await fetch('/api/schema/status');
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const status = await response.json();
+        const statusDiv = document.getElementById('schema-status');
+        
+        if (status.ready) {
+          const upToDateIcon = status.upToDate ? '✅' : '⚠️';
+          const upToDateText = status.upToDate ? 'Up to date' : 'Needs upgrade';
+          
+          statusDiv.innerHTML = `
+            <p><strong>Status:</strong> ${upToDateIcon} ${upToDateText}</p>
+            <p><strong>Current Version:</strong> ${status.currentVersion}</p>
+            <p><strong>Target Version:</strong> ${status.targetVersion}</p>
+            <p><strong>Tables:</strong> ${status.tables.join(', ')}</p>
+            <details>
+              <summary><strong>Database Indexes (${status.indexes.length})</strong></summary>
+              <ul>
+                ${status.indexes.map(idx => 
+                  `<li><code>${idx.table}.${idx.name}</code> (${idx.type})</li>`
+                ).join('')}
+              </ul>
+            </details>
+          `;
+        } else {
+          statusDiv.innerHTML = `
+            <p><strong>Status:</strong> ❌ Database not ready</p>
+            <p><strong>Error:</strong> ${status.error}</p>
+          `;
+        }
+      } catch (error) {
+        document.getElementById('schema-status').innerHTML = `
+          <p><strong>Status:</strong> ❌ Failed to load schema status</p>
+          <p><strong>Error:</strong> ${error.message}</p>
+        `;
+      }
+    }
+    
+    // Load schema status on page load
+    loadSchemaStatus();
+  </script>
 </body>
 </html>
