@@ -4,12 +4,12 @@ let markersLayer;
 async function initMap() {
   map = L.map('map');
 
-  // try get current location
+  // Try to get current location
   navigator.geolocation.getCurrentPosition(pos => {
     const {latitude, longitude} = pos.coords;
     map.setView([latitude, longitude], 13);
   }, () => {
-    // fallback centre Netherlands
+    // Fallback to center of Netherlands
     map.setView([52.1, 5.1], 7);
   });
 
@@ -19,8 +19,16 @@ async function initMap() {
   }).addTo(map);
 
   markersLayer = L.layerGroup().addTo(map);
-  await loadDevices();
-  await loadMapData();
+  
+  try {
+    await loadDevices();
+    await loadMapData();
+  } catch (e) {
+    console.error('Failed to initialize map data:', e);
+    if (typeof frontendLog === 'function') {
+      frontendLog(`Failed to initialize map: ${e.message}`, 'ERROR', 'MAP');
+    }
+  }
 }
 
 let deviceId;
@@ -57,30 +65,50 @@ async function loadDevices() {
       const list = await resp.json();
       const select = document.getElementById('deviceSelect');
       select.innerHTML = list
-        .map(d => `<option value="${d.id}">${d.id}${d.nickname ? ` (${d.nickname})` : ''}</option>`)
+        .map(d => `<option value="${d.device_id}">${d.device_id}${d.nickname ? ` (${d.nickname})` : ''}</option>`)
         .join('');
+      
+      // Automatically select all devices by default
+      Array.from(select.options).forEach(option => option.selected = true);
+      
+      if (typeof frontendLog === 'function') {
+        frontendLog(`Loaded ${list.length} devices`, 'INFO', 'DEVICE');
+      }
     }
   } catch (e) {
     console.error('Failed to load devices', e);
+    if (typeof frontendLog === 'function') {
+      frontendLog(`Failed to load devices: ${e.message}`, 'ERROR', 'DEVICE');
+    }
   }
 }
 
 // Add nickname change button logic
 document.addEventListener('DOMContentLoaded', () => {
-  // ...existing code...
   deviceId = getDeviceId();
   initMap();
   loadNickname();
-  document.getElementById('saveNicknameBtn')?.addEventListener('click', saveNickname);
+  
+  // Device selection change handler
   document.getElementById('deviceSelect').addEventListener('change', loadMapData);
+  
+  // Save nickname button handler (if exists)
+  const saveBtn = document.getElementById('saveNicknameBtn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', saveNickname);
+  }
 
   // Add nickname change button handler
   const changeBtn = document.getElementById('changeNicknameBtn');
   if (changeBtn) {
     changeBtn.addEventListener('click', async () => {
       const select = document.getElementById('deviceSelect');
-      const selectedId = select.value;
-      if (!selectedId) return alert('Selecteer een apparaat');
+      const selectedOptions = Array.from(select.selectedOptions);
+      if (selectedOptions.length !== 1) {
+        return alert('Selecteer precies één apparaat om de bijnaam te wijzigen');
+      }
+      const selectedId = selectedOptions[0].value;
+      
       // Fetch current nickname
       let currentNickname = '';
       try {
@@ -90,6 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
           currentNickname = dev.nickname || '';
         }
       } catch {}
+      
       const newNickname = prompt('Nieuwe bijnaam voor apparaat:', currentNickname);
       if (newNickname !== null) {
         try {
@@ -99,8 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify({ device_id: selectedId, nickname: newNickname })
           });
           if (resp.ok) {
-            if (typeof frontendLog === 'function') frontendLog(`Nickname changed for ${selectedId} to "${newNickname}"`, 'INFO', 'DEVICE');
-            loadDevices();
+            if (typeof frontendLog === 'function') {
+              frontendLog(`Nickname changed for ${selectedId} to "${newNickname}"`, 'INFO', 'DEVICE');
+            }
+            await loadDevices();
           } else {
             alert('Bijnaam wijzigen mislukt');
           }
@@ -123,17 +154,37 @@ async function loadMapData() {
       const data = await resp.json();
       data.forEach(r => {
         if (r.latitude && r.longitude) {
+          const color = getColor(r.roughness);
+          const timestamp = new Date(r.timestamp).toLocaleString();
           L.circleMarker(
             [r.latitude, r.longitude],
-            { radius: 6, color: getColor(r.roughness), fillColor: getColor(r.roughness), fillOpacity: 0.8 }
+            { 
+              radius: 5, 
+              color: color, 
+              fillColor: color, 
+              fillOpacity: 0.7,
+              weight: 2
+            }
           )
             .addTo(markersLayer)
-            .bindPopup(`${r.timestamp} - ${t('roughnessLabel')}: ${r.roughness}`);
+            .bindPopup(`
+              <strong>Device:</strong> ${r.device_id}<br>
+              <strong>Time:</strong> ${timestamp}<br>
+              <strong>Roughness:</strong> ${r.roughness.toFixed(2)}<br>
+              <strong>Speed:</strong> ${r.speed ? r.speed.toFixed(1) : 'N/A'} m/s
+            `);
         }
       });
+      
+      if (typeof frontendLog === 'function') {
+        frontendLog(`Loaded ${data.length} map points for ${ids.length || 'all'} device(s)`, 'INFO', 'MAP');
+      }
     }
   } catch (e) {
     console.error('Data fetch error', e);
+    if (typeof frontendLog === 'function') {
+      frontendLog(`Failed to load map data: ${e.message}`, 'ERROR', 'MAP');
+    }
   }
 }
 
@@ -157,11 +208,3 @@ function saveNickname() {
     body: JSON.stringify({ device_id: deviceId, nickname })
   }).catch(e => console.error('Nickname save failed', e));
 }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    deviceId = getDeviceId();
-    initMap();
-    loadNickname();
-    document.getElementById('saveNicknameBtn').addEventListener('click', saveNickname);
-    document.getElementById('deviceSelect').addEventListener('change', loadMapData);
-  });

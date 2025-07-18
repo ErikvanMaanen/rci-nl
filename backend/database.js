@@ -539,7 +539,7 @@ async function getDevice(deviceId) {
     throw new Error('Database not ready');
   }
 
-  const result = await query`SELECT id, nickname FROM devices WHERE id = ${deviceId}`;
+  const result = await query`SELECT id as device_id, nickname FROM devices WHERE id = ${deviceId}`;
   return result.recordset.length > 0 ? result.recordset[0] : null;
 }
 
@@ -552,7 +552,7 @@ async function getAllDevices() {
     throw new Error('Database not ready');
   }
 
-  const result = await query`SELECT id, nickname FROM devices ORDER BY nickname`;
+  const result = await query`SELECT id as device_id, nickname FROM devices ORDER BY nickname`;
   return result.recordset;
 }
 
