@@ -1,5 +1,8 @@
+let map;
+let markersLayer;
+
 async function initMap() {
-  const map = L.map('map');
+  map = L.map('map');
 
   // try get current location
   navigator.geolocation.getCurrentPosition(pos => {
@@ -15,21 +18,9 @@ async function initMap() {
     attribution: '© OpenStreetMap'
   }).addTo(map);
 
-  try {
-    const resp = await fetch('/api/rci-data');
-    if (resp.ok) {
-      const data = await resp.json();
-      data.forEach(r => {
-        if (r.latitude && r.longitude) {
-          L.marker([r.latitude, r.longitude])
-            .addTo(map)
-            .bindPopup(`${r.timestamp} - ${t('roughnessLabel')}: ${r.roughness}`);
-        }
-      });
-    }
-  } catch (e) {
-    console.error('Data fetch error', e);
-  }
+  markersLayer = L.layerGroup().addTo(map);
+  await loadDevices();
+  await loadMapData();
 }
 
 let deviceId;
@@ -46,6 +37,57 @@ function getDeviceId() {
     }).catch(()=>{});
   }
   return id;
+}
+
+function getSelectedDeviceIds() {
+  const select = document.getElementById('deviceSelect');
+  return Array.from(select.selectedOptions).map(o => o.value);
+}
+
+function getColor(roughness) {
+  const ratio = Math.max(0, Math.min(1, roughness / 10));
+  const hue = (1 - ratio) * 120; // 120=green, 0=red
+  return `hsl(${hue},100%,50%)`;
+}
+
+async function loadDevices() {
+  try {
+    const resp = await fetch('/api/devices');
+    if (resp.ok) {
+      const list = await resp.json();
+      const select = document.getElementById('deviceSelect');
+      select.innerHTML = list
+        .map(d => `<option value="${d.id}">${d.nickname || d.id}</option>`)
+        .join('');
+    }
+  } catch (e) {
+    console.error('Failed to load devices', e);
+  }
+}
+
+async function loadMapData() {
+  if (!markersLayer) return;
+  markersLayer.clearLayers();
+  const ids = getSelectedDeviceIds();
+  const query = ids.length ? `?devices=${encodeURIComponent(ids.join(','))}` : '';
+  try {
+    const resp = await fetch('/api/rci-data' + query);
+    if (resp.ok) {
+      const data = await resp.json();
+      data.forEach(r => {
+        if (r.latitude && r.longitude) {
+          L.circleMarker(
+            [r.latitude, r.longitude],
+            { radius: 6, color: getColor(r.roughness), fillColor: getColor(r.roughness), fillOpacity: 0.8 }
+          )
+            .addTo(markersLayer)
+            .bindPopup(`${r.timestamp} - ${t('roughnessLabel')}: ${r.roughness}`);
+        }
+      });
+    }
+  } catch (e) {
+    console.error('Data fetch error', e);
+  }
 }
 
 async function loadNickname() {
@@ -69,9 +111,10 @@ function saveNickname() {
   }).catch(e => console.error('Nickname save failed', e));
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  deviceId = getDeviceId();
-  initMap();
-  loadNickname();
-  document.getElementById('saveNicknameBtn').addEventListener('click', saveNickname);
-});
+  document.addEventListener('DOMContentLoaded', () => {
+    deviceId = getDeviceId();
+    initMap();
+    loadNickname();
+    document.getElementById('saveNicknameBtn').addEventListener('click', saveNickname);
+    document.getElementById('deviceSelect').addEventListener('change', loadMapData);
+  });

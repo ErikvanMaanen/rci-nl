@@ -94,6 +94,17 @@ app.get('/api/device/:id', async (req, res) => {
   }
 });
 
+// Endpoint to list all registered devices
+app.get('/api/devices', async (req, res) => {
+  try {
+    const result = await sql.query`SELECT id, nickname FROM devices ORDER BY nickname`;
+    res.json(result.recordset);
+  } catch (err) {
+    await logger.error(`Error retrieving devices: ${err.message}`, 'API');
+    res.status(500).json({ error: 'failed' });
+  }
+});
+
 app.post('/api/register', async (req, res) => {
   const { device_id, nickname = null } = req.body;
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -239,14 +250,28 @@ app.post('/api/logs', async (req, res) => {
 // Endpoint to retrieve measurement records for map view
 app.get('/api/rci-data', async (req, res) => {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  const { limit = 1000 } = req.query;
+  const { limit = 1000, devices } = req.query;
 
   try {
     const request = new sql.Request();
     request.input('limit', sql.Int, Math.min(parseInt(limit) || 1000, 1000));
-    const result = await request.query(
-      'SELECT TOP (@limit) timestamp, latitude, longitude, roughness FROM RIBS_Data ORDER BY id DESC'
-    );
+    let query = 'SELECT TOP (@limit) timestamp, latitude, longitude, roughness, device_id FROM RIBS_Data';
+
+    if (devices) {
+      const ids = devices.split(',').map((id) => id.trim()).filter(Boolean);
+      if (ids.length > 0) {
+        const conditions = ids.map((id, idx) => {
+          const param = `id${idx}`;
+          request.input(param, sql.NVarChar(100), id);
+          return `@${param}`;
+        });
+        query += ` WHERE device_id IN (${conditions.join(',')})`;
+      }
+    }
+
+    query += ' ORDER BY id DESC';
+
+    const result = await request.query(query);
     res.json(result.recordset);
   } catch (err) {
     await logger.error(`Error retrieving RIBS_Data for IP ${ip}: ${err.message}`, 'API');
