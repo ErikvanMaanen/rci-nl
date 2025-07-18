@@ -1,3 +1,5 @@
+
+// ----- Startup Tasks -----
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('service-worker.js');
 }
@@ -112,6 +114,7 @@ const algorithmVersion = '1.0';
 
 const deviceId = getDeviceId();
 
+// Startup initialization
 openDb();
 checkLocationStatus();
 
@@ -143,6 +146,7 @@ function getDeviceId() {
   return id;
 }
 
+// ----- Data Storage and Retrieval -----
 function openDb() {
   const request = indexedDB.open('rci', 1);
   request.onupgradeneeded = function(e) {
@@ -245,6 +249,7 @@ function onMotion(e) {
   drawChart(z);
 }
 
+// ----- Roughness Calculation -----
 function processWindow() {
   const values = sampleBuffer.map(s => s.z);
   const rms = Math.sqrt(values.reduce((s,v) => s+v*v,0)/values.length);

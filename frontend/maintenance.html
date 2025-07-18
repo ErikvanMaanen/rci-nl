@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maintenance</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Maintenance Overview</h1>
+  <h2>Server Endpoints</h2>
+  <ul>
+    <li><code>GET /api/device/:id</code> - Retrieve nickname for a device</li>
+    <li><code>POST /api/register</code> - Register or update a device nickname</li>
+    <li><code>POST /api/upload</code> - Upload measurement data</li>
+    <li><code>GET /api/logs</code> - Retrieve application logs</li>
+    <li><code>GET /api/logs/stats</code> - Summary statistics of logs</li>
+    <li><code>POST /api/logs</code> - Receive frontend log messages</li>
+    <li><code>GET /api/rci-data</code> - Retrieve measurement records for the map</li>
+  </ul>
+
+  <h2>Main Functions</h2>
+  <ul>
+    <li><strong>Backend</strong>
+      <ul>
+        <li><code>cleanupOldLogs()</code> - Remove old log entries from the database</li>
+      </ul>
+    </li>
+    <li><strong>Frontend</strong>
+      <ul>
+        <li><code>getDeviceId()</code> - Retrieve or generate the unique device ID</li>
+        <li><code>openDb()</code> - Open the local IndexedDB storage</li>
+        <li><code>startRecording()</code> - Begin data collection</li>
+        <li><code>stopRecording()</code> - Stop data collection</li>
+        <li><code>processWindow()</code> - Calculate roughness metrics from samples</li>
+        <li><code>saveRecord()</code> - Save measurements locally</li>
+        <li><code>uploadRecord()</code> - Send measurements to the backend</li>
+        <li><code>fetchLogs()</code> - Retrieve logs for display</li>
+      </ul>
+    </li>
+  </ul>
+</body>
+</html>

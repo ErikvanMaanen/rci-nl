@@ -6,6 +6,7 @@ const logger = require('./logger');
 const app = express();
 app.use(express.json());
 
+// ----- Startup Tasks -----
 // Request logging middleware - only log important API calls
 app.use(async (req, res, next) => {
   // Only log non-GET API requests to reduce spam (GET /api/logs is very frequent)
@@ -18,7 +19,8 @@ app.use(async (req, res, next) => {
 // Serve static frontend files
 require('./serve-frontend')(app);
 
-
+// ----- Startup Tasks -----
+// Database configuration and connection settings
 const config = {
   user: process.env.AZURE_SQL_USERNAME,
   password: process.env.AZURE_SQL_PASSWORD,
@@ -42,6 +44,7 @@ const ensureTables = require('./ensure-tables');
 
 let connectionPool = null;
 
+// Connect to the database and prepare tables
 sql.connect(config)
   .then(async (pool) => {
     connectionPool = pool;
@@ -119,6 +122,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
+// ----- Data Storage and Retrieval -----
 app.post('/api/upload', async (req, res) => {
   const data = req.body;
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -258,6 +262,7 @@ app.use(async (err, req, res, next) => {
 });
 
 const port = process.env.PORT || 3000;
+// Start listening for requests
 const server = app.listen(port, () => {
   console.log(`[${new Date().toISOString()}] [INFO] [SERVER] Server started and listening on port ${port}`);
   // Don't try to log to database immediately as it might not be ready yet
