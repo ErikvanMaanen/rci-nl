@@ -17,8 +17,19 @@ async function ensureTables() {
     IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='devices' AND xtype='U')
     CREATE TABLE devices (
       id NVARCHAR(100) PRIMARY KEY,
-      registered_at DATETIME NOT NULL
+      registered_at DATETIME NOT NULL,
+      nickname NVARCHAR(100) NULL
     );
+  `;
+
+  const addNicknameColumn = `
+    IF EXISTS (SELECT * FROM sysobjects WHERE name='devices' AND xtype='U')
+    AND NOT EXISTS (
+      SELECT * FROM sys.columns
+      WHERE Name = N'nickname'
+        AND Object_ID = Object_ID('devices')
+    )
+    ALTER TABLE devices ADD nickname NVARCHAR(100) NULL;
   `;
   // Logs table
   const createLogs = `
@@ -61,6 +72,9 @@ async function ensureTables() {
     await sql.query(createDevices);
     console.log('[DB] devices table checked/created');
     await log('Devices table ensured', 'INFO', 'DATABASE');
+
+    await sql.query(addNicknameColumn);
+    await log('Device nickname column ensured', 'INFO', 'DATABASE');
     
     await sql.query(createLogs);
     console.log('[DB] logs table checked/created');
