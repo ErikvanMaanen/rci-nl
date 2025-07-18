@@ -1,16 +1,14 @@
 // Centralized logging module for the RIBS Tracker application
-const sql = require('mssql');
-
-let databaseReady = false;
+const database = require('./database');
 
 // Function to check if database is ready
 function isDatabaseReady() {
-  return databaseReady && sql.connected;
+  return database.isDatabaseReady();
 }
 
 // Function to mark database as ready (called from index.js after connection)
 function setDatabaseReady() {
-  databaseReady = true;
+  database.setDatabaseReady();
 }
 
 /**
@@ -25,7 +23,7 @@ async function log(message, level = 'INFO', source = 'SERVER') {
   try {
     // Only log to database if connection is ready
     if (isDatabaseReady()) {
-      await sql.query`INSERT INTO logs(message, log_time, level, source) VALUES(${message}, GETDATE(), ${level}, ${source})`;
+      await database.insertLog(message, level, source);
     }
     
     // Only log to console for WARN, ERROR, or important sources to reduce console spam
