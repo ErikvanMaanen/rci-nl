@@ -344,7 +344,13 @@ function drawChart(value){
 
 function fetchLogs(){
   fetch('/api/logs')
-    .then(r=>r.json())
+    .then(async r => {
+      if (!r.ok) {
+        const text = await r.text();
+        throw new Error(`Server responded ${r.status}: ${text}`);
+      }
+      return r.json();
+    })
     .then(list=>{
       // Add new log lines to the bottom
       logDiv.innerHTML = list.map(l => {
