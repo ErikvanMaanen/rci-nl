@@ -1,0 +1,15 @@
+{
+  "title": "RIBS Tracker",
+  "heading": "RIBS Tracker",
+  "startButton": "Start meting",
+  "stopButton": "Stop meting",
+  "locationStatusLabel": "Locatie status:",
+  "dbStatusLabel": "Database status:",
+  "locationOkTitle": "Locatie ontvangen",
+  "locationErrorTitle": "Locatie niet beschikbaar",
+  "dbOkTitle": "Database verbinding OK",
+  "dbErrorTitle": "Database niet bereikbaar",
+  "mapTitle": "Metingen kaart",
+  "roughnessIndex": "RIBS – Roughness Index for Bicycle Surfaces",
+  "roughnessLabel": "ruwheid"
+}

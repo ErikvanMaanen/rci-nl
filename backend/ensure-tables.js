@@ -37,24 +37,24 @@ async function ensureTables() {
     IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_logs_time_level' AND object_id = OBJECT_ID('logs'))
     CREATE INDEX IX_logs_time_level ON logs(log_time DESC, level);
   `;
-  // RCI data table
-  const createRciData = `
-    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='rci_data' AND xtype='U')
-    CREATE TABLE rci_data (
+  // RIBS data table
+  const createRibsData = `
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='RIBS_Data' AND xtype='U')
+    CREATE TABLE RIBS_Data (
       id INT IDENTITY(1,1) PRIMARY KEY,
-      timestamp NVARCHAR(50),
-      latitude FLOAT,
-      longitude FLOAT,
-      speed FLOAT,
-      direction FLOAT,
-      roughness FLOAT,
-      distance_m FLOAT,
-      device_id NVARCHAR(100),
-      ip_address NVARCHAR(100),
-      z_values NVARCHAR(MAX),
-      avg_speed FLOAT,
-      interval_s FLOAT,
-      algorithm_version NVARCHAR(20)
+      timestamp NVARCHAR(50) NOT NULL,
+      latitude FLOAT NOT NULL,
+      longitude FLOAT NOT NULL,
+      speed FLOAT NOT NULL,
+      direction FLOAT NOT NULL,
+      roughness FLOAT NOT NULL,
+      distance_m FLOAT NOT NULL,
+      device_id NVARCHAR(100) NOT NULL,
+      ip_address NVARCHAR(45) NOT NULL,
+      z_values NVARCHAR(MAX) NOT NULL,
+      avg_speed FLOAT NOT NULL,
+      interval_s FLOAT NOT NULL,
+      algorithm_version NVARCHAR(50) NOT NULL
     );
   `;
   try {
@@ -70,9 +70,9 @@ async function ensureTables() {
     console.log('[DB] logs table index checked/created');
     await log('Logs table index ensured', 'INFO', 'DATABASE');
     
-    await sql.query(createRciData);
-    console.log('[DB] rci_data table checked/created');
-    await log('RCI data table ensured', 'INFO', 'DATABASE');
+    await sql.query(createRibsData);
+    console.log('[DB] RIBS_Data table checked/created');
+    await log('RIBS data table ensured', 'INFO', 'DATABASE');
   } catch (err) {
     console.error('[DB] Table check/create error:', err);
     await log(`Table creation error: ${err.message}`, 'ERROR', 'DATABASE');

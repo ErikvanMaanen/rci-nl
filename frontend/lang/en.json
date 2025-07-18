@@ -1,0 +1,15 @@
+{
+  "title": "RIBS Tracker",
+  "heading": "RIBS Tracker",
+  "startButton": "Start measurement",
+  "stopButton": "Stop measurement",
+  "locationStatusLabel": "Location status:",
+  "dbStatusLabel": "Database status:",
+  "locationOkTitle": "Location received",
+  "locationErrorTitle": "Location unavailable",
+  "dbOkTitle": "Database connection OK",
+  "dbErrorTitle": "Database unreachable",
+  "mapTitle": "Measurement Map",
+  "roughnessIndex": "RIBS – Roughness Index for Bicycle Surfaces",
+  "roughnessLabel": "roughness"
+}

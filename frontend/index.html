@@ -3,23 +3,25 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fiets RCI Meter</title>
+    <title>RIBS Tracker</title>
     <link rel="manifest" href="manifest.json" />
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <h1>RCI Fietsmeting</h1>
+    <h1 data-i18n="heading"></h1>
+    <p data-i18n="roughnessIndex" style="font-size:14px;"></p>
     <div id="status-indicators" style="margin-bottom:10px;">
-        <span id="locationStatus" class="status-dot" title="Locatie status">●</span>
+        <span data-i18n="locationStatusLabel"></span>
+        <span id="locationStatus" class="status-dot" title="Location status">●</span>
+        <span style="margin-left:10px;" data-i18n="dbStatusLabel"></span>
         <span id="dbStatus" class="status-dot" title="Database status">●</span>
-        <span style="font-size:12px; color:#666; margin-left:8px;">Locatie | Database</span>
     </div>
     <div id="controls">
-        <button id="startBtn">Start meting</button>
-        <button id="stopBtn" disabled>Stop meting</button>
+        <button id="recordBtn" data-i18n="startButton"></button>
     </div>
     <canvas id="chart" width="300" height="150"></canvas>
     <div id="log" class="log"></div>
+    <script src="i18n.js"></script>
     <script src="main.js"></script>
 </body>
 </html>

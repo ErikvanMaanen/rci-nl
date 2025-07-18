@@ -68,8 +68,7 @@ console.warn = function(...args) {
 
 // Don't override console.log to prevent logging spam
 
-const startBtn = document.getElementById('startBtn');
-const stopBtn = document.getElementById('stopBtn');
+const recordBtn = document.getElementById('recordBtn');
 const chartCanvas = document.getElementById('chart');
 const ctx = chartCanvas.getContext('2d');
 const logDiv = document.getElementById('log');
@@ -81,16 +80,16 @@ let chartData = [];
 function setLocationStatus(ok) {
   if (locationStatus) {
     locationStatus.style.color = ok ? '#4CAF50' : '#F44336';
-    locationStatus.textContent = ok ? 'Locatie OK' : 'Locatie FOUT';
-    locationStatus.title = ok ? 'Locatie ontvangen' : 'Locatie niet beschikbaar';
+    locationStatus.textContent = '●';
+    locationStatus.title = ok ? t('locationOkTitle') : t('locationErrorTitle');
   }
 }
 
 function setDbStatus(ok) {
   if (dbStatus) {
     dbStatus.style.color = ok ? '#4CAF50' : '#F44336';
-    dbStatus.textContent = ok ? 'Database OK' : 'Database FOUT';
-    dbStatus.title = ok ? 'Database verbinding OK' : 'Database niet bereikbaar';
+    dbStatus.textContent = '●';
+    dbStatus.title = ok ? t('dbOkTitle') : t('dbErrorTitle');
   }
 }
 
@@ -113,9 +112,15 @@ const algorithmVersion = '1.0';
 const deviceId = getDeviceId();
 
 openDb();
+checkLocationStatus();
 
-startBtn.addEventListener('click', startRecording);
-stopBtn.addEventListener('click', stopRecording);
+recordBtn.addEventListener('click', () => {
+  if (recording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+});
 
 function getDeviceId() {
   let id = localStorage.getItem('device_id');
@@ -163,8 +168,7 @@ function startRecording() {
     distance = 0;
     lastPos = null;
     recording = true;
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
+    recordBtn.textContent = t('stopButton');
     watchId = navigator.geolocation.watchPosition(
       pos => {
         setLocationStatus(true);
@@ -190,17 +194,32 @@ function stopRecording() {
   navigator.geolocation.clearWatch(watchId);
   window.removeEventListener('devicemotion', onMotion);
   recording = false;
-  startBtn.disabled = false;
-  stopBtn.disabled = true;
+  recordBtn.textContent = t('startButton');
   setLocationStatus(false);
   frontendLog('Recording session stopped', 'INFO', 'RECORDING');
 }
 
 function requestPermissions() {
-  return Promise.all([
-    navigator.permissions.query({name:'geolocation'}),
-    DeviceMotionEvent.requestPermission ? DeviceMotionEvent.requestPermission() : Promise.resolve('granted')
-  ]);
+  const geoPromise = new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      () => resolve('granted'),
+      err => reject(err)
+    );
+  });
+  const motionPromise = DeviceMotionEvent.requestPermission
+    ? DeviceMotionEvent.requestPermission()
+    : Promise.resolve('granted');
+  return Promise.all([geoPromise, motionPromise]);
+}
+
+function checkLocationStatus() {
+  navigator.geolocation.getCurrentPosition(
+    () => setLocationStatus(true),
+    () => {
+      setLocationStatus(false);
+      requestPermissions().catch(() => {});
+    }
+  );
 }
 
 function onPosition(pos) {
@@ -356,4 +375,4 @@ window.addEventListener('unhandledrejection', function(event) {
 });
 
 // Log application startup
-frontendLog('RCI Application initialized', 'INFO', 'STARTUP');
+frontendLog('RIBS Tracker initialized', 'INFO', 'STARTUP');
