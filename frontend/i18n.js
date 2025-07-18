@@ -1,8 +1,10 @@
 let translations = {};
+let currentLang = 'nl';
 
-function loadTranslations() {
-  const lang = (navigator.language || 'nl').slice(0,2).toLowerCase();
-  const file = `lang/${lang}.json`;
+function loadTranslations(lang) {
+  const selected = lang || localStorage.getItem('lang') || (navigator.language || 'nl').slice(0,2).toLowerCase();
+  currentLang = selected;
+  const file = `lang/${selected}.json`;
   return fetch(file)
     .then(r => r.ok ? r.json() : fetch('lang/en.json').then(rr => rr.json()))
     .then(data => {
@@ -35,7 +37,17 @@ function applyTranslations() {
   }
 }
 
+function setLanguage(lang) {
+  localStorage.setItem('lang', lang);
+  loadTranslations(lang);
+}
+
 // Load on startup
 if (typeof window !== 'undefined') {
   loadTranslations();
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.lang-switch button').forEach(btn => {
+      btn.addEventListener('click', () => setLanguage(btn.getAttribute('data-lang')));
+    });
+  });
 }

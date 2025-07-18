@@ -10,12 +10,25 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-o9N1j8B+CHD+tN7J++nFSYYp0f5OIyyLTMnYhZi3kX0=" crossorigin=""></script>
 </head>
 <body>
+    <div class="top-bar">
+        <nav class="nav-bar">
+            <a href="index.html" data-i18n="navHome"></a>
+            <a href="device.html" data-i18n="navMap"></a>
+            <a href="maintenance.html" data-i18n="navMaintenance"></a>
+        </nav>
+        <div class="lang-switch">
+            <button data-lang="en">EN</button>
+            <button data-lang="nl">NL</button>
+        </div>
+    </div>
     <h1 data-i18n="mapTitle"></h1>
     <label for="nicknameInput" data-i18n="deviceNickname"></label>
     <input id="nicknameInput" type="text" />
     <button id="saveNicknameBtn" data-i18n="saveNickname"></button>
     <div id="map" style="height:400px;"></div>
+    <div id="log" class="log"></div>
     <script src="i18n.js"></script>
+    <script src="logs.js"></script>
     <script src="device.js"></script>
 </body>
 </html>
