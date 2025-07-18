@@ -104,7 +104,7 @@ app.post('/api/upload', async (req, res) => {
   
   try {
     await sql.query`
-      INSERT INTO rci_data(timestamp, latitude, longitude, speed, direction, roughness, distance_m, device_id, ip_address, z_values, avg_speed, interval_s, algorithm_version)
+      INSERT INTO RIBS_Data(timestamp, latitude, longitude, speed, direction, roughness, distance_m, device_id, ip_address, z_values, avg_speed, interval_s, algorithm_version)
       VALUES(${data.timestamp}, ${data.latitude}, ${data.longitude}, ${data.speed}, ${data.direction}, ${data.roughness}, ${data.distance_m}, ${data.device_id}, ${ip}, ${JSON.stringify(data.z_values)}, ${data.avg_speed}, ${data.interval_s}, ${data.algorithm_version})
     `;
     // Don't log every successful upload to reduce spam
@@ -218,11 +218,11 @@ app.get('/api/rci-data', async (req, res) => {
     const request = new sql.Request();
     request.input('limit', sql.Int, Math.min(parseInt(limit) || 1000, 1000));
     const result = await request.query(
-      'SELECT TOP (@limit) timestamp, latitude, longitude, roughness FROM rci_data ORDER BY id DESC'
+      'SELECT TOP (@limit) timestamp, latitude, longitude, roughness FROM RIBS_Data ORDER BY id DESC'
     );
     res.json(result.recordset);
   } catch (err) {
-    await logger.error(`Error retrieving rci_data for IP ${ip}: ${err.message}`, 'API');
+    await logger.error(`Error retrieving RIBS_Data for IP ${ip}: ${err.message}`, 'API');
     res.status(500).send('error');
   }
 });

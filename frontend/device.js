@@ -23,7 +23,7 @@ async function initMap() {
         if (r.latitude && r.longitude) {
           L.marker([r.latitude, r.longitude])
             .addTo(map)
-            .bindPopup(`${r.timestamp} - ruwheid: ${r.roughness}`);
+            .bindPopup(`${r.timestamp} - ${t('roughnessLabel')}: ${r.roughness}`);
         }
       });
     }

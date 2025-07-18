@@ -1,4 +1,4 @@
-// Centralized logging module for the RCI-NL application
+// Centralized logging module for the RIBS Tracker application
 const sql = require('mssql');
 
 let databaseReady = false;

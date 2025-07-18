@@ -1,13 +1,16 @@
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open('rci-cache').then(cache => cache.addAll([
+    caches.open('ribs-cache').then(cache => cache.addAll([
       './',
       'index.html',
       'device.html',
       'style.css',
       'main.js',
       'device.js',
-      'manifest.json'
+      'manifest.json',
+      'i18n.js',
+      'lang/en.json',
+      'lang/nl.json'
     ]))
   );
 });

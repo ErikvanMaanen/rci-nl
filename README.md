@@ -1,4 +1,4 @@
-# RCI NL PWA
+# RIBS Tracker PWA
 
 Deze repository bevat een voorbeeldimplementatie van een Progressive Web App (PWA) waarmee ruwheidsmetingen van het fietspad worden gedaan. De app verzamelt sensordata en locatiegegevens, verwerkt deze lokaal en uploadt de resultaten naar een Node.js backend die gekoppeld kan worden aan Azure SQL.
 
@@ -31,6 +31,25 @@ De `logs` tabel wordt automatisch aangemaakt bij startup en bevat:
 - `log_time` (DATETIME, timestamp)
 - `level` (NVARCHAR(20), log level - INFO/WARN/ERROR/DEBUG)
 - `source` (NVARCHAR(100), bron van de log)
+
+Daarnaast wordt de tabel `RIBS_Data` gebruikt om meetgegevens op te slaan:
+
+| kolom           | type           | info |
+|-----------------|----------------|------|
+| `id`            | INT IDENTITY(1,1) PRIMARY KEY | uniek id |
+| `timestamp`     | NVARCHAR(50) NOT NULL | tijdstip van meting |
+| `latitude`      | FLOAT NOT NULL | breedtegraad |
+| `longitude`     | FLOAT NOT NULL | lengtegraad |
+| `speed`         | FLOAT NOT NULL | snelheid |
+| `direction`     | FLOAT NOT NULL | koers |
+| `roughness`     | FLOAT NOT NULL | ruwheidswaarde |
+| `distance_m`    | FLOAT NOT NULL | afgelegde afstand |
+| `device_id`     | NVARCHAR(100) NOT NULL | id van het apparaat |
+| `ip_address`    | NVARCHAR(45) NOT NULL | IP-adres |
+| `z_values`      | NVARCHAR(MAX) NOT NULL | ruwe sensorwaarden |
+| `avg_speed`     | FLOAT NOT NULL | gemiddelde snelheid |
+| `interval_s`    | FLOAT NOT NULL | meetinterval in seconden |
+| `algorithm_version` | NVARCHAR(50) NOT NULL | versie van algoritme |
 
 ## Installatie Backend
 
