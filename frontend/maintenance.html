@@ -7,6 +7,17 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div class="top-bar">
+    <nav class="nav-bar">
+      <a href="index.html" data-i18n="navHome"></a>
+      <a href="device.html" data-i18n="navMap"></a>
+      <a href="maintenance.html" data-i18n="navMaintenance"></a>
+    </nav>
+    <div class="lang-switch">
+      <button data-lang="en">EN</button>
+      <button data-lang="nl">NL</button>
+    </div>
+  </div>
   <h1>Maintenance Overview</h1>
   <h2>Server Endpoints</h2>
   <ul>
@@ -39,5 +50,8 @@
       </ul>
     </li>
   </ul>
+  <div id="log" class="log"></div>
+  <script src="i18n.js"></script>
+  <script src="logs.js"></script>
 </body>
 </html>

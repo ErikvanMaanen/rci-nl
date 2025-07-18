@@ -13,5 +13,8 @@
   "roughnessIndex": "RIBS – Roughness Index for Bicycle Surfaces",
   "roughnessLabel": "ruwheid",
   "deviceNickname": "Apparaatnaam:",
-  "saveNickname": "Opslaan"
+  "saveNickname": "Opslaan",
+  "navHome": "Start",
+  "navMap": "Kaart",
+  "navMaintenance": "Onderhoud"
 }
