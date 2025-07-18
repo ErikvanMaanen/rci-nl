@@ -22,12 +22,25 @@
         </div>
     </div>
     <h1 data-i18n="mapTitle"></h1>
-    <label for="nicknameInput" data-i18n="deviceNickname"></label>
-    <input id="nicknameInput" type="text" />
-    <button id="saveNicknameBtn" data-i18n="saveNickname"></button>
-    <label for="deviceSelect" data-i18n="deviceSelect"></label>
-    <select id="deviceSelect" multiple style="min-width:200px;"></select>
-    <div id="map" style="height:400px;"></div>
+    <style>
+      body { font-size: 15px; margin: 0; padding: 0; }
+      .top-bar, .nav-bar, .lang-switch { display: flex; align-items: center; }
+      .top-bar { justify-content: space-between; padding: 4px 10px; background: #f5f5f5; }
+      .nav-bar a { margin-right: 10px; font-size: 15px; }
+      .lang-switch button { margin-left: 4px; font-size: 13px; padding: 2px 8px; }
+      h1 { font-size: 1.2em; margin: 10px 0 6px 0; }
+      label, select, input, button { font-size: 15px; margin: 2px 0; }
+      #deviceSelect { min-width: 220px; margin-bottom: 6px; }
+      #map { height: 320px; margin-top: 8px; }
+      #log { font-size: 13px; max-height: 90px; overflow-y: auto; margin-top: 6px; }
+      .nickname-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    </style>
+    <div class="nickname-row">
+      <label for="deviceSelect" data-i18n="deviceSelect"></label>
+      <select id="deviceSelect" style="min-width:220px;"></select>
+      <button id="changeNicknameBtn" title="Wijzig bijnaam" style="padding:2px 8px;">✎</button>
+    </div>
+    <div id="map"></div>
     <div id="log" class="log"></div>
     <script src="i18n.js"></script>
     <script src="logs.js"></script>

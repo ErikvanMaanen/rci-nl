@@ -57,13 +57,60 @@ async function loadDevices() {
       const list = await resp.json();
       const select = document.getElementById('deviceSelect');
       select.innerHTML = list
-        .map(d => `<option value="${d.id}">${d.nickname || d.id}</option>`)
+        .map(d => `<option value="${d.id}">${d.id}${d.nickname ? ` (${d.nickname})` : ''}</option>`)
         .join('');
     }
   } catch (e) {
     console.error('Failed to load devices', e);
   }
 }
+
+// Add nickname change button logic
+document.addEventListener('DOMContentLoaded', () => {
+  // ...existing code...
+  deviceId = getDeviceId();
+  initMap();
+  loadNickname();
+  document.getElementById('saveNicknameBtn')?.addEventListener('click', saveNickname);
+  document.getElementById('deviceSelect').addEventListener('change', loadMapData);
+
+  // Add nickname change button handler
+  const changeBtn = document.getElementById('changeNicknameBtn');
+  if (changeBtn) {
+    changeBtn.addEventListener('click', async () => {
+      const select = document.getElementById('deviceSelect');
+      const selectedId = select.value;
+      if (!selectedId) return alert('Selecteer een apparaat');
+      // Fetch current nickname
+      let currentNickname = '';
+      try {
+        const resp = await fetch(`/api/device/${selectedId}`);
+        if (resp.ok) {
+          const dev = await resp.json();
+          currentNickname = dev.nickname || '';
+        }
+      } catch {}
+      const newNickname = prompt('Nieuwe bijnaam voor apparaat:', currentNickname);
+      if (newNickname !== null) {
+        try {
+          const resp = await fetch('/api/register', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ device_id: selectedId, nickname: newNickname })
+          });
+          if (resp.ok) {
+            if (typeof frontendLog === 'function') frontendLog(`Nickname changed for ${selectedId} to "${newNickname}"`, 'INFO', 'DEVICE');
+            loadDevices();
+          } else {
+            alert('Bijnaam wijzigen mislukt');
+          }
+        } catch (e) {
+          alert('Bijnaam wijzigen mislukt: ' + e.message);
+        }
+      }
+    });
+  }
+});
 
 async function loadMapData() {
   if (!markersLayer) return;

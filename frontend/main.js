@@ -1,4 +1,3 @@
-
 // ----- Startup Tasks -----
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('service-worker.js');
@@ -76,7 +75,6 @@ const ctx = chartCanvas.getContext('2d');
 const logDiv = document.getElementById('log');
 const locationStatus = document.getElementById('locationStatus');
 const dbStatus = document.getElementById('dbStatus');
-// ...existing code...
 let chartData = [];
 // --- Status Indicator Helpers ---
 function setLocationStatus(ok) {
@@ -342,37 +340,6 @@ function drawChart(value){
   ctx.stroke();
 }
 
-function fetchLogs(){
-  fetch('/api/logs')
-    .then(async r => {
-      if (!r.ok) {
-        const text = await r.text();
-        throw new Error(`Server responded ${r.status}: ${text}`);
-      }
-      return r.json();
-    })
-    .then(list=>{
-      // Add new log lines to the bottom
-      logDiv.innerHTML = list.map(l => {
-        const time = new Date(l.log_time).toLocaleString();
-        const levelClass = l.level ? l.level.toLowerCase() : 'info';
-        const source = l.source ? `[${l.source}]` : '';
-        return `<div class="log-entry log-${levelClass}">
-          <span class="log-time">${time}</span>
-          <span class="log-source">${source}</span>
-          <span class="log-level">[${l.level || 'INFO'}]</span>
-          <span class="log-message">${l.message}</span>
-        </div>`;
-      }).join('');
-      // Scroll to bottom to show latest log
-      logDiv.scrollTop = logDiv.scrollHeight;
-    })
-    .catch(err => {
-      frontendLog(`Failed to fetch logs: ${err.message}`, 'ERROR', 'LOG_FETCH');
-    });
-}
-
-
 // --- Database Status Polling ---
 async function checkDbStatus() {
   try {
@@ -388,9 +355,7 @@ async function checkDbStatus() {
   }
 }
 
-setInterval(fetchLogs, 5000);
 setInterval(checkDbStatus, 5000);
-fetchLogs();
 checkDbStatus();
 
 // Global error handling
