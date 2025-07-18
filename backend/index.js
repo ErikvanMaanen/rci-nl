@@ -65,8 +65,12 @@ sql.connect(config)
 // Function to clean up old logs to prevent database from growing too large
 async function cleanupOldLogs() {
   try {
+    if (!connectionPool) {
+      await logger.warn('Database not ready, skipping log cleanup', 'DATABASE');
+      return;
+    }
     // Keep only the last 1000 log entries
-    const request = new sql.Request();
+    const request = connectionPool.request();
     const result = await request.query(`
       DELETE FROM logs 
       WHERE id NOT IN (
@@ -158,6 +162,11 @@ app.get('/api/logs', async (req, res) => {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   const { level, source, limit = 100 } = req.query;
   
+  if (!connectionPool) {
+    await logger.warn('Database not ready, cannot get logs', 'API');
+    return res.status(503).send('Database not ready');
+  }
+  
   // Don't log every log request to avoid spam
   // await logger.api(`Logs requested`, `IP: ${ip}, Level filter: ${level || 'all'}, Source filter: ${source || 'all'}`);
   
@@ -180,7 +189,7 @@ app.get('/api/logs', async (req, res) => {
     
     query += ' ORDER BY log_time DESC';
     
-    const request = new sql.Request();
+    const request = connectionPool.request();
     request.input('limit', sql.Int, Math.min(parseInt(limit) || 100, 1000)); // Cap at 1000
     
     if (level && ['INFO', 'WARN', 'ERROR', 'DEBUG'].includes(level.toUpperCase())) {
@@ -205,8 +214,13 @@ app.get('/api/logs/stats', async (req, res) => {
   // Don't log stats requests to reduce spam
   // await logger.api(`Log statistics requested`, `IP: ${ip}`);
   
+  if (!connectionPool) {
+    await logger.warn('Database not ready, cannot get log stats', 'API');
+    return res.status(503).send('Database not ready');
+  }
+  
   try {
-    const request = new sql.Request();
+    const request = connectionPool.request();
     const result = await request.query(`
       SELECT 
         level,
@@ -252,8 +266,13 @@ app.get('/api/rci-data', async (req, res) => {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   const { limit = 1000, devices } = req.query;
 
+  if (!connectionPool) {
+    await logger.warn('Database not ready, cannot get rci-data', 'API');
+    return res.status(503).send('Database not ready');
+  }
+
   try {
-    const request = new sql.Request();
+    const request = connectionPool.request();
     request.input('limit', sql.Int, Math.min(parseInt(limit) || 1000, 1000));
     let query = 'SELECT TOP (@limit) timestamp, latitude, longitude, roughness, device_id FROM RIBS_Data';
 
