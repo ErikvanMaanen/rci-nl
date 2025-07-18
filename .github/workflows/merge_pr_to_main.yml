@@ -2,19 +2,30 @@ name: Merge Pull Request
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, ready_for_review, closed]
 
 jobs:
   merge:
-    if: github.event.pull_request.base.ref == 'main' && github.event.pull_request.draft == false
+    if: >
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.draft == false &&
+      github.event.action != 'closed'
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
 
     steps:
-      - name: Merge pull request into main
+      - name: Ensure gh CLI is installed
         run: |
-          gh pr merge ${{ github.event.pull_request.number }} --squash --auto
+          if ! command -v gh &> /dev/null; then
+            sudo apt update
+            sudo apt install gh -y
+          fi
+
+      - name: Merge pull request into main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          gh pr merge ${{ github.event.pull_request.number }} --squash --auto
