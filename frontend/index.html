@@ -8,6 +8,17 @@
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+    <div class="top-bar">
+        <nav class="nav-bar">
+            <a href="index.html" data-i18n="navHome"></a>
+            <a href="device.html" data-i18n="navMap"></a>
+            <a href="maintenance.html" data-i18n="navMaintenance"></a>
+        </nav>
+        <div class="lang-switch">
+            <button data-lang="en">EN</button>
+            <button data-lang="nl">NL</button>
+        </div>
+    </div>
     <h1 data-i18n="heading"></h1>
     <p data-i18n="roughnessIndex" style="font-size:14px;"></p>
     <div id="status-indicators" style="margin-bottom:10px;">
@@ -22,6 +33,7 @@
     <canvas id="chart" width="300" height="150"></canvas>
     <div id="log" class="log"></div>
     <script src="i18n.js"></script>
+    <script src="logs.js"></script>
     <script src="main.js"></script>
 </body>
 </html>

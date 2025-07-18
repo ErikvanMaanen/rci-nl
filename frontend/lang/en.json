@@ -13,5 +13,8 @@
   "roughnessIndex": "RIBS – Roughness Index for Bicycle Surfaces",
   "roughnessLabel": "roughness",
   "deviceNickname": "Device nickname:",
-  "saveNickname": "Save"
+  "saveNickname": "Save",
+  "navHome": "Home",
+  "navMap": "Map",
+  "navMaintenance": "Maintenance"
 }
