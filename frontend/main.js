@@ -101,7 +101,8 @@ let recording = false;
 let db;
 let bias = {x:0,y:0,z:0};
 let sampleBuffer = [];
-let windowBuffer = [];
+let positionBuffer = [];
+let currentPos = null;
 let distance = 0;
 let lastPos = null;
 const fs = 50; // sample frequency
@@ -164,7 +165,7 @@ function startRecording() {
   requestPermissions().then(() => {
     bias = {x:0,y:0,z:0};
     sampleBuffer = [];
-    windowBuffer = [];
+    positionBuffer = [];
     distance = 0;
     lastPos = null;
     recording = true;
@@ -224,6 +225,8 @@ function checkLocationStatus() {
 
 function onPosition(pos) {
   setLocationStatus(true);
+  currentPos = pos;
+  positionBuffer.push({time: Date.now(), speed: pos.coords.speed || 0});
   if (lastPos) {
     distance += haversine(lastPos.coords.latitude, lastPos.coords.longitude, pos.coords.latitude, pos.coords.longitude);
   }
@@ -248,14 +251,28 @@ function processWindow() {
   const vdv = Math.pow(values.reduce((s,v)=>s+Math.pow(Math.abs(v),4),0)/values.length,0.25);
   const cf = Math.max(...values.map(v=>Math.abs(v)))/rms;
 
+  const lat = currentPos ? currentPos.coords.latitude : null;
+  const lon = currentPos ? currentPos.coords.longitude : null;
+  const speed = currentPos && currentPos.coords.speed != null ? currentPos.coords.speed : 0;
+  const direction = currentPos && currentPos.coords.heading != null ? currentPos.coords.heading : 0;
+  const avg_speed = positionBuffer.length ? positionBuffer.reduce((s,p)=>s+p.speed,0)/positionBuffer.length : 0;
+  const interval_s = positionBuffer.length>1 ? (positionBuffer[positionBuffer.length-1].time - positionBuffer[0].time)/1000 : 0;
+  positionBuffer = [];
+
   const record = {
     timestamp: new Date().toISOString(),
     device_id: deviceId,
+    latitude: lat,
+    longitude: lon,
+    speed,
+    direction,
     distance_m: distance,
     roughness: rms,
     vdv,
     crest_factor: cf,
     z_values: values,
+    avg_speed,
+    interval_s,
     algorithm_version: algorithmVersion
   };
   saveRecord(record);

@@ -76,8 +76,23 @@ async function cleanupOldLogs() {
   }
 }
 
+// Endpoint to retrieve device info (currently only nickname)
+app.get('/api/device/:id', async (req, res) => {
+  const deviceId = req.params.id;
+  try {
+    const result = await sql.query`SELECT id, nickname FROM devices WHERE id = ${deviceId}`;
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'not found' });
+    }
+    res.json(result.recordset[0]);
+  } catch (err) {
+    await logger.error(`Error fetching device ${deviceId}: ${err.message}`, 'API');
+    res.status(500).json({ error: 'failed' });
+  }
+});
+
 app.post('/api/register', async (req, res) => {
-  const { device_id } = req.body;
+  const { device_id, nickname = null } = req.body;
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   await logger.api(`Device registration attempt for device ${device_id}`, `IP: ${ip}`);
   
@@ -87,7 +102,15 @@ app.post('/api/register', async (req, res) => {
   }
   
   try {
-    await sql.query`INSERT INTO devices (id, registered_at) VALUES (${device_id}, GETDATE())`;
+    await sql.query`
+      MERGE devices AS target
+      USING (SELECT ${device_id} AS id, ${nickname} AS nickname) AS src
+      ON target.id = src.id
+      WHEN MATCHED THEN
+        UPDATE SET nickname = src.nickname
+      WHEN NOT MATCHED THEN
+        INSERT (id, registered_at, nickname) VALUES (src.id, GETDATE(), src.nickname);
+    `;
     await logger.api(`Successfully registered device ${device_id}`, `IP: ${ip}`);
     res.sendStatus(200);
   } catch (err) {

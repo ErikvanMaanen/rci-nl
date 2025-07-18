@@ -11,5 +11,7 @@
   "dbErrorTitle": "Database niet bereikbaar",
   "mapTitle": "Metingen kaart",
   "roughnessIndex": "RIBS – Roughness Index for Bicycle Surfaces",
-  "roughnessLabel": "ruwheid"
+  "roughnessLabel": "ruwheid",
+  "deviceNickname": "Apparaatnaam:",
+  "saveNickname": "Opslaan"
 }

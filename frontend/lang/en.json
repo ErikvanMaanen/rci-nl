@@ -11,5 +11,7 @@
   "dbErrorTitle": "Database unreachable",
   "mapTitle": "Measurement Map",
   "roughnessIndex": "RIBS – Roughness Index for Bicycle Surfaces",
-  "roughnessLabel": "roughness"
+  "roughnessLabel": "roughness",
+  "deviceNickname": "Device nickname:",
+  "saveNickname": "Save"
 }

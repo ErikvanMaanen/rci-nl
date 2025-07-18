@@ -32,4 +32,46 @@ async function initMap() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', initMap);
+let deviceId;
+
+function getDeviceId() {
+  let id = localStorage.getItem('device_id');
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem('device_id', id);
+    fetch('/api/register', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ device_id: id })
+    }).catch(()=>{});
+  }
+  return id;
+}
+
+async function loadNickname() {
+  try {
+    const resp = await fetch(`/api/device/${deviceId}`);
+    if (resp.ok) {
+      const info = await resp.json();
+      document.getElementById('nicknameInput').value = info.nickname || '';
+    }
+  } catch (e) {
+    console.error('Failed to load nickname', e);
+  }
+}
+
+function saveNickname() {
+  const nickname = document.getElementById('nicknameInput').value;
+  fetch('/api/register', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ device_id: deviceId, nickname })
+  }).catch(e => console.error('Nickname save failed', e));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  deviceId = getDeviceId();
+  initMap();
+  loadNickname();
+  document.getElementById('saveNicknameBtn').addEventListener('click', saveNickname);
+});
