@@ -22,6 +22,20 @@
         </div>
     </div>
     <h1 data-i18n="mapTitle"></h1>
+    <div id="status-indicators" style="margin-bottom:8px; font-size:12px;">
+        <span data-i18n="dbStatusLabel"></span>
+        <span id="dbStatus" class="status-dot" title="Database status">●</span>
+        <span style="margin-left:8px;" data-i18n="logWriteStatusLabel"></span>
+        <span id="logWriteStatus" class="status-dot" title="Log writing status">●</span>
+        <span style="margin-left:8px;" data-i18n="logFetchStatusLabel"></span>
+        <span id="logFetchStatus" class="status-dot" title="Log fetching status">●</span>
+        <span style="margin-left:8px;" data-i18n="dataWriteStatusLabel"></span>
+        <span id="dataWriteStatus" class="status-dot" title="Data writing status">●</span>
+        <span style="margin-left:8px;" data-i18n="dataFetchStatusLabel"></span>
+        <span id="dataFetchStatus" class="status-dot" title="Data fetching status">●</span>
+        <span style="margin-left:8px;" data-i18n="testStatusLabel"></span>
+        <span id="testStatus" class="status-dot" title="Test status">●</span>
+    </div>
     <style>
       body { font-size: 14px; margin: 0; padding: 0; }
       .top-bar, .nav-bar, .lang-switch { display: flex; align-items: center; }

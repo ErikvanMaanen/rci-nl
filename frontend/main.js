@@ -21,9 +21,18 @@ function frontendLog(message, level = 'INFO', source = 'FRONTEND') {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ message, level, source })
+    }).then(response => {
+      if (response.ok && typeof setLogWriteStatus === 'function') {
+        setLogWriteStatus(true);
+      } else if (!response.ok && typeof setLogWriteStatus === 'function') {
+        setLogWriteStatus(false, `HTTP ${response.status}`);
+      }
     }).catch(err => {
       // Use original console methods to avoid recursion
       originalConsoleError('Failed to send log to backend:', err);
+      if (typeof setLogWriteStatus === 'function') {
+        setLogWriteStatus(false, err.message);
+      }
     });
   }
   
@@ -75,6 +84,11 @@ const ctx = chartCanvas.getContext('2d');
 const logDiv = document.getElementById('log');
 const locationStatus = document.getElementById('locationStatus');
 const dbStatus = document.getElementById('dbStatus');
+const logWriteStatus = document.getElementById('logWriteStatus');
+const logFetchStatus = document.getElementById('logFetchStatus');
+const dataWriteStatus = document.getElementById('dataWriteStatus');
+const dataFetchStatus = document.getElementById('dataFetchStatus');
+const testStatus = document.getElementById('testStatus');
 let chartData = [];
 // --- Status Indicator Helpers ---
 function setLocationStatus(ok) {
@@ -93,8 +107,53 @@ function setDbStatus(ok) {
   }
 }
 
+function setLogWriteStatus(ok, error = '') {
+  if (logWriteStatus) {
+    logWriteStatus.style.color = ok ? '#4CAF50' : '#F44336';
+    logWriteStatus.textContent = '●';
+    logWriteStatus.title = ok ? t('logWriteOkTitle') : t('logWriteErrorTitle') + (error ? ': ' + error : '');
+  }
+}
+
+function setLogFetchStatus(ok, error = '') {
+  if (logFetchStatus) {
+    logFetchStatus.style.color = ok ? '#4CAF50' : '#F44336';
+    logFetchStatus.textContent = '●';
+    logFetchStatus.title = ok ? t('logFetchOkTitle') : t('logFetchErrorTitle') + (error ? ': ' + error : '');
+  }
+}
+
+function setDataWriteStatus(ok, error = '') {
+  if (dataWriteStatus) {
+    dataWriteStatus.style.color = ok ? '#4CAF50' : '#F44336';
+    dataWriteStatus.textContent = '●';
+    dataWriteStatus.title = ok ? t('dataWriteOkTitle') : t('dataWriteErrorTitle') + (error ? ': ' + error : '');
+  }
+}
+
+function setDataFetchStatus(ok, error = '') {
+  if (dataFetchStatus) {
+    dataFetchStatus.style.color = ok ? '#4CAF50' : '#F44336';
+    dataFetchStatus.textContent = '●';
+    dataFetchStatus.title = ok ? t('dataFetchOkTitle') : t('dataFetchErrorTitle') + (error ? ': ' + error : '');
+  }
+}
+
+function setTestStatus(ok, error = '') {
+  if (testStatus) {
+    testStatus.style.color = ok ? '#4CAF50' : '#F44336';
+    testStatus.textContent = '●';
+    testStatus.title = ok ? t('testOkTitle') : t('testErrorTitle') + (error ? ': ' + error : '');
+  }
+}
+
 setLocationStatus(false); // Default: not receiving
 setDbStatus(false); // Default: not connected
+setLogWriteStatus(false); // Default: not tested
+setLogFetchStatus(false); // Default: not tested
+setDataWriteStatus(false); // Default: not tested
+setDataFetchStatus(false); // Default: not tested
+setTestStatus(false); // Default: not tested
 
 let watchId;
 let recording = false;
@@ -115,6 +174,7 @@ const deviceId = getDeviceId();
 // Startup initialization
 openDb();
 checkLocationStatus();
+runStartupTests();
 
 recordBtn.addEventListener('click', () => {
   if (recording) {
@@ -296,10 +356,20 @@ function uploadRecord(rec) {
   }).then(response => {
     if (!response.ok) {
       frontendLog(`Data upload failed with status: ${response.status}`, 'ERROR', 'UPLOAD');
+      if (typeof setDataWriteStatus === 'function') {
+        setDataWriteStatus(false, `HTTP ${response.status}`);
+      }
+    } else {
+      // Don't log successful uploads to reduce spam - they happen very frequently
+      if (typeof setDataWriteStatus === 'function') {
+        setDataWriteStatus(true);
+      }
     }
-    // Don't log successful uploads to reduce spam - they happen very frequently
   }).catch(err => {
     frontendLog(`Data upload error: ${err.message}`, 'ERROR', 'UPLOAD');
+    if (typeof setDataWriteStatus === 'function') {
+      setDataWriteStatus(false, err.message);
+    }
   });
 }
 
@@ -357,6 +427,134 @@ async function checkDbStatus() {
 
 setInterval(checkDbStatus, 5000);
 checkDbStatus();
+
+// --- Startup Tests ---
+async function runStartupTests() {
+  frontendLog('Running startup tests...', 'INFO', 'STARTUP_TESTS');
+  
+  const tests = [
+    testLogWriting,
+    testLogFetching,
+    testDataWriting,
+    testDataFetching
+  ];
+  
+  const results = await Promise.allSettled(tests.map(test => test()));
+  
+  const failed = results.filter(r => r.status === 'rejected');
+  const passed = results.filter(r => r.status === 'fulfilled');
+  
+  if (failed.length === 0) {
+    setTestStatus(true);
+    frontendLog(`All startup tests passed (${passed.length}/${results.length})`, 'INFO', 'STARTUP_TESTS');
+  } else {
+    const errors = failed.map(r => r.reason?.message || r.reason).join(', ');
+    setTestStatus(false, errors);
+    frontendLog(`Startup tests failed: ${failed.length}/${results.length} - ${errors}`, 'ERROR', 'STARTUP_TESTS');
+  }
+}
+
+async function testLogWriting() {
+  try {
+    const testMessage = 'Test log message from startup test';
+    const response = await fetch('/api/logs', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        message: testMessage,
+        level: 'INFO',
+        source: 'STARTUP_TEST'
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    setLogWriteStatus(true);
+    return true;
+  } catch (error) {
+    setLogWriteStatus(false, error.message);
+    throw error;
+  }
+}
+
+async function testLogFetching() {
+  try {
+    const response = await fetch('/api/logs?limit=1');
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const logs = await response.json();
+    if (!Array.isArray(logs)) {
+      throw new Error('Invalid response format');
+    }
+    
+    setLogFetchStatus(true);
+    return true;
+  } catch (error) {
+    setLogFetchStatus(false, error.message);
+    throw error;
+  }
+}
+
+async function testDataWriting() {
+  try {
+    const testData = {
+      device_id: deviceId,
+      timestamp: new Date().toISOString(),
+      latitude: 52.0,
+      longitude: 5.0,
+      speed: 0,
+      direction: 0,
+      distance_m: 0,
+      roughness: 0.1,
+      vdv: 0.1,
+      crest_factor: 1.0,
+      z_values: [0.1, 0.2, 0.1],
+      avg_speed: 0,
+      interval_s: 1.0,
+      algorithm_version: algorithmVersion
+    };
+    
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(testData)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    setDataWriteStatus(true);
+    return true;
+  } catch (error) {
+    setDataWriteStatus(false, error.message);
+    throw error;
+  }
+}
+
+async function testDataFetching() {
+  try {
+    const response = await fetch('/api/rci-data?limit=1');
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    if (!Array.isArray(data)) {
+      throw new Error('Invalid response format');
+    }
+    
+    setDataFetchStatus(true);
+    return true;
+  } catch (error) {
+    setDataFetchStatus(false, error.message);
+    throw error;
+  }
+}
 
 // Global error handling
 window.addEventListener('error', function(event) {

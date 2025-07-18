@@ -16,8 +16,18 @@ function fetchLogs(){
           `</div>`;
       }).join('');
       logDiv.scrollTop = logDiv.scrollHeight;
+      
+      // Update log fetch status
+      if (typeof setLogFetchStatus === 'function') {
+        setLogFetchStatus(true);
+      }
     })
     .catch(err => {
+      // Update log fetch status
+      if (typeof setLogFetchStatus === 'function') {
+        setLogFetchStatus(false, err.message);
+      }
+      
       if (typeof frontendLog === 'function') {
         frontendLog(`Failed to fetch logs: ${err.message}`, 'ERROR', 'LOG_FETCH');
       } else {

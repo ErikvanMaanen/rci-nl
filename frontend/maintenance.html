@@ -19,6 +19,20 @@
     </div>
   </div>
   <h1>Maintenance Overview</h1>
+  <div id="status-indicators" style="margin-bottom:10px;">
+    <span data-i18n="dbStatusLabel"></span>
+    <span id="dbStatus" class="status-dot" title="Database status">●</span>
+    <span style="margin-left:10px;" data-i18n="logWriteStatusLabel"></span>
+    <span id="logWriteStatus" class="status-dot" title="Log writing status">●</span>
+    <span style="margin-left:10px;" data-i18n="logFetchStatusLabel"></span>
+    <span id="logFetchStatus" class="status-dot" title="Log fetching status">●</span>
+    <span style="margin-left:10px;" data-i18n="dataWriteStatusLabel"></span>
+    <span id="dataWriteStatus" class="status-dot" title="Data writing status">●</span>
+    <span style="margin-left:10px;" data-i18n="dataFetchStatusLabel"></span>
+    <span id="dataFetchStatus" class="status-dot" title="Data fetching status">●</span>
+    <span style="margin-left:10px;" data-i18n="testStatusLabel"></span>
+    <span id="testStatus" class="status-dot" title="Test status">●</span>
+  </div>
   <h2>Server Endpoints</h2>
   <ul>
     <li><code>GET /api/device/:id</code> - Retrieve nickname for a device</li>
@@ -59,6 +73,7 @@
   <div id="log" class="log"></div>
   <script src="i18n.js"></script>
   <script src="logs.js"></script>
+  <script src="main.js"></script>
   <script>
     // Load schema status information
     async function loadSchemaStatus() {

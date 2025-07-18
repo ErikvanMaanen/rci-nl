@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status Indicators Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status-dot { font-size: 20px; vertical-align: middle; margin-right: 8px; }
+        .test-section { margin-bottom: 20px; border: 1px solid #ccc; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Status Indicators Test</h1>
+    
+    <div class="test-section">
+        <h2>Current Status</h2>
+        <div>
+            <span>Database:</span>
+            <span id="dbStatus" class="status-dot">●</span>
+            <span>Log Write:</span>
+            <span id="logWriteStatus" class="status-dot">●</span>
+            <span>Log Fetch:</span>
+            <span id="logFetchStatus" class="status-dot">●</span>
+            <span>Data Write:</span>
+            <span id="dataWriteStatus" class="status-dot">●</span>
+            <span>Data Fetch:</span>
+            <span id="dataFetchStatus" class="status-dot">●</span>
+            <span>Tests:</span>
+            <span id="testStatus" class="status-dot">●</span>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Manual Tests</h2>
+        <button onclick="testLogWrite()">Test Log Write</button>
+        <button onclick="testLogFetch()">Test Log Fetch</button>
+        <button onclick="testDataWrite()">Test Data Write</button>
+        <button onclick="testDataFetch()">Test Data Fetch</button>
+        <button onclick="runAllTests()">Run All Tests</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="testResults" style="font-family: monospace; background: #f0f0f0; padding: 10px; min-height: 100px;">
+            Results will appear here...
+        </div>
+    </div>
+
+    <script>
+        // Status indicator functions
+        function setDbStatus(ok, error = '') {
+            const el = document.getElementById('dbStatus');
+            if (el) {
+                el.style.color = ok ? '#4CAF50' : '#F44336';
+                el.title = ok ? 'Database OK' : 'Database error' + (error ? ': ' + error : '');
+            }
+        }
+
+        function setLogWriteStatus(ok, error = '') {
+            const el = document.getElementById('logWriteStatus');
+            if (el) {
+                el.style.color = ok ? '#4CAF50' : '#F44336';
+                el.title = ok ? 'Log writing works' : 'Log writing failed' + (error ? ': ' + error : '');
+            }
+        }
+
+        function setLogFetchStatus(ok, error = '') {
+            const el = document.getElementById('logFetchStatus');
+            if (el) {
+                el.style.color = ok ? '#4CAF50' : '#F44336';
+                el.title = ok ? 'Log fetching works' : 'Log fetching failed' + (error ? ': ' + error : '');
+            }
+        }
+
+        function setDataWriteStatus(ok, error = '') {
+            const el = document.getElementById('dataWriteStatus');
+            if (el) {
+                el.style.color = ok ? '#4CAF50' : '#F44336';
+                el.title = ok ? 'Data writing works' : 'Data writing failed' + (error ? ': ' + error : '');
+            }
+        }
+
+        function setDataFetchStatus(ok, error = '') {
+            const el = document.getElementById('dataFetchStatus');
+            if (el) {
+                el.style.color = ok ? '#4CAF50' : '#F44336';
+                el.title = ok ? 'Data fetching works' : 'Data fetching failed' + (error ? ': ' + error : '');
+            }
+        }
+
+        function setTestStatus(ok, error = '') {
+            const el = document.getElementById('testStatus');
+            if (el) {
+                el.style.color = ok ? '#4CAF50' : '#F44336';
+                el.title = ok ? 'All tests pass' : 'Tests failed' + (error ? ': ' + error : '');
+            }
+        }
+
+        function log(message) {
+            const results = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            results.innerHTML += `[${timestamp}] ${message}\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+
+        // Test functions
+        async function testLogWrite() {
+            log('Testing log write...');
+            try {
+                const response = await fetch('/api/logs', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        message: 'Test log message from indicator test',
+                        level: 'INFO',
+                        source: 'INDICATOR_TEST'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                setLogWriteStatus(true);
+                log('✓ Log write test PASSED');
+                return true;
+            } catch (error) {
+                setLogWriteStatus(false, error.message);
+                log('✗ Log write test FAILED: ' + error.message);
+                throw error;
+            }
+        }
+
+        async function testLogFetch() {
+            log('Testing log fetch...');
+            try {
+                const response = await fetch('/api/logs?limit=1');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const logs = await response.json();
+                if (!Array.isArray(logs)) {
+                    throw new Error('Invalid response format');
+                }
+                
+                setLogFetchStatus(true);
+                log(`✓ Log fetch test PASSED (got ${logs.length} logs)`);
+                return true;
+            } catch (error) {
+                setLogFetchStatus(false, error.message);
+                log('✗ Log fetch test FAILED: ' + error.message);
+                throw error;
+            }
+        }
+
+        async function testDataWrite() {
+            log('Testing data write...');
+            try {
+                const testData = {
+                    device_id: 'test-device-' + Date.now(),
+                    timestamp: new Date().toISOString(),
+                    latitude: 52.0,
+                    longitude: 5.0,
+                    speed: 0,
+                    direction: 0,
+                    distance_m: 0,
+                    roughness: 0.1,
+                    vdv: 0.1,
+                    crest_factor: 1.0,
+                    z_values: [0.1, 0.2, 0.1],
+                    avg_speed: 0,
+                    interval_s: 1.0,
+                    algorithm_version: '1.0'
+                };
+                
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(testData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                setDataWriteStatus(true);
+                log('✓ Data write test PASSED');
+                return true;
+            } catch (error) {
+                setDataWriteStatus(false, error.message);
+                log('✗ Data write test FAILED: ' + error.message);
+                throw error;
+            }
+        }
+
+        async function testDataFetch() {
+            log('Testing data fetch...');
+            try {
+                const response = await fetch('/api/rci-data?limit=1');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                if (!Array.isArray(data)) {
+                    throw new Error('Invalid response format');
+                }
+                
+                setDataFetchStatus(true);
+                log(`✓ Data fetch test PASSED (got ${data.length} records)`);
+                return true;
+            } catch (error) {
+                setDataFetchStatus(false, error.message);
+                log('✗ Data fetch test FAILED: ' + error.message);
+                throw error;
+            }
+        }
+
+        async function checkDbStatus() {
+            try {
+                const response = await fetch('/api/logs?limit=1');
+                if (response.ok) {
+                    setDbStatus(true);
+                } else {
+                    setDbStatus(false, `HTTP ${response.status}`);
+                }
+            } catch (e) {
+                setDbStatus(false, e.message);
+            }
+        }
+
+        async function runAllTests() {
+            log('=== Running all tests ===');
+            const tests = [testLogWrite, testLogFetch, testDataWrite, testDataFetch];
+            
+            const results = await Promise.allSettled(tests.map(test => test()));
+            
+            const failed = results.filter(r => r.status === 'rejected');
+            const passed = results.filter(r => r.status === 'fulfilled');
+            
+            if (failed.length === 0) {
+                setTestStatus(true);
+                log(`=== ALL TESTS PASSED (${passed.length}/${results.length}) ===`);
+            } else {
+                const errors = failed.map(r => r.reason?.message || r.reason).join(', ');
+                setTestStatus(false, `${failed.length} failed`);
+                log(`=== TESTS FAILED: ${failed.length}/${results.length} - ${errors} ===`);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Indicator test page loaded');
+            checkDbStatus();
+            
+            // Auto-run tests after a short delay
+            setTimeout(() => {
+                log('Auto-running startup tests...');
+                runAllTests();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -176,14 +176,28 @@ async function loadMapData() {
         }
       });
       
+      // Update data fetch status
+      if (typeof setDataFetchStatus === 'function') {
+        setDataFetchStatus(true);
+      }
+      
       if (typeof frontendLog === 'function') {
         frontendLog(`Loaded ${data.length} map points for ${ids.length || 'all'} device(s)`, 'INFO', 'MAP');
+      }
+    } else {
+      // Update data fetch status
+      if (typeof setDataFetchStatus === 'function') {
+        setDataFetchStatus(false, `HTTP ${resp.status}`);
       }
     }
   } catch (e) {
     console.error('Data fetch error', e);
     if (typeof frontendLog === 'function') {
       frontendLog(`Failed to load map data: ${e.message}`, 'ERROR', 'MAP');
+    }
+    // Update data fetch status
+    if (typeof setDataFetchStatus === 'function') {
+      setDataFetchStatus(false, e.message);
     }
   }
 }

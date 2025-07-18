@@ -3,7 +3,7 @@ const express = require('express');
 const logger = require('./logger');
 
 module.exports = function setupFrontend(app) {
-  const frontendPath = path.join(__dirname, 'frontend');
+  const frontendPath = path.join(__dirname, '..', 'frontend');
 
   // Custom static file serving with logging for index.html requests
   app.use(express.static(frontendPath));
