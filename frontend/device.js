@@ -68,8 +68,7 @@ async function loadDevices() {
         .map(d => `<option value="${d.device_id}">${d.device_id}${d.nickname ? ` (${d.nickname})` : ''}</option>`)
         .join('');
       
-      // Automatically select all devices by default
-      Array.from(select.options).forEach(option => option.selected = true);
+      // Do not pre-select devices so all data is shown by default
       
       if (typeof frontendLog === 'function') {
         frontendLog(`Loaded ${list.length} devices`, 'INFO', 'DEVICE');
