@@ -118,7 +118,7 @@ app.post('/api/upload', async (req, res) => {
 
 app.get('/api/logs', async (req, res) => {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  const { level, source, limit = 100 } = req.query;
+  const { level, source, api, limit = 100 } = req.query;
   
   if (!database.isDatabaseReady()) {
     await logger.warn('Database not ready, cannot get logs', 'API');
@@ -129,7 +129,7 @@ app.get('/api/logs', async (req, res) => {
   // await logger.api(`Logs requested`, `IP: ${ip}, Level filter: ${level || 'all'}, Source filter: ${source || 'all'}`);
   
   try {
-    const logs = await database.getLogs({ level, source, limit });
+    const logs = await database.getLogs({ level, source, api, limit });
     res.json(logs);
   } catch (err) {
     await logger.error(`Error retrieving logs for IP ${ip}: ${err.message}`, 'API');

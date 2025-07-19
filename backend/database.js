@@ -445,7 +445,7 @@ async function insertLog(message, level = 'INFO', source = 'SERVER') {
  * @returns {Promise<Array>} Log entries
  */
 async function getLogs(options = {}) {
-  const { level, source, limit = 100 } = options;
+  const { level, source, api, limit = 100 } = options;
   
   if (!isDatabaseReady()) {
     throw new Error('Database not ready');
@@ -455,16 +455,37 @@ async function getLogs(options = {}) {
   const params = { limit: sql.Int, limitValue: Math.min(parseInt(limit) || 100, 1000) };
   const conditions = [];
 
-  if (level && ['INFO', 'WARN', 'ERROR', 'DEBUG'].includes(level.toUpperCase())) {
-    conditions.push('level = @level');
-    params.level = sql.NVarChar(20);
-    params.levelValue = level.toUpperCase();
+  // Multi-select level filter
+  const levelList = typeof level === 'string' ? level.split(',').map(l => l.trim()).filter(Boolean) : [];
+  if (levelList.length > 0) {
+    const placeholders = levelList.map((_, i) => `@level${i}`);
+    conditions.push(`level IN (${placeholders.join(',')})`);
+    levelList.forEach((lvl, i) => {
+      params[`level${i}`] = sql.NVarChar(20);
+      params[`level${i}Value`] = lvl.toUpperCase();
+    });
   }
 
-  if (source && source.length < 100) {
-    conditions.push('source = @source');
-    params.source = sql.NVarChar(100);
-    params.sourceValue = source;
+  // Multi-select source filter
+  const sourceList = typeof source === 'string' ? source.split(',').map(s => s.trim()).filter(Boolean) : [];
+  if (sourceList.length > 0) {
+    const placeholders = sourceList.map((_, i) => `@source${i}`);
+    conditions.push(`source IN (${placeholders.join(',')})`);
+    sourceList.forEach((src, i) => {
+      params[`source${i}`] = sql.NVarChar(100);
+      params[`source${i}Value`] = src;
+    });
+  }
+
+  // API operation filter based on message contents
+  const apiList = typeof api === 'string' ? api.split(',').map(a => a.trim()).filter(Boolean) : [];
+  if (apiList.length > 0) {
+    const placeholders = apiList.map((_, i) => `@api${i}`);
+    conditions.push('(' + placeholders.map(p => `message LIKE ${p}`).join(' OR ') + ')');
+    apiList.forEach((op, i) => {
+      params[`api${i}`] = sql.NVarChar(sql.MAX);
+      params[`api${i}Value`] = `API operation: ${op}%`;
+    });
   }
 
   if (conditions.length > 0) {
@@ -475,14 +496,14 @@ async function getLogs(options = {}) {
 
   const request = connectionPool.request();
   request.input('limit', params.limit, params.limitValue);
-  
-  if (params.levelValue) {
-    request.input('level', params.level, params.levelValue);
-  }
-  
-  if (params.sourceValue) {
-    request.input('source', params.source, params.sourceValue);
-  }
+
+  Object.keys(params).forEach(key => {
+    if (key.endsWith('Value')) return;
+    const valueKey = key + 'Value';
+    if (params[valueKey] !== undefined) {
+      request.input(key, params[key], params[valueKey]);
+    }
+  });
 
   const result = await request.query(queryText);
   return result.recordset;
