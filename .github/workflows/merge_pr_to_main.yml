@@ -1,30 +1,36 @@
-name: Merge Pull Request
+name: Auto Merge Pull Request
 
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
+  check_suite:
+    types: [completed]
+  status: {}
 
 jobs:
-  merge:
+  auto-merge:
     if: >
       github.event.pull_request.base.ref == 'main' &&
-      github.event.pull_request.draft == false &&
-      github.event.action != 'closed'
+      github.event.pull_request.draft == false
     runs-on: ubuntu-latest
 
     permissions:
       contents: write
       pull-requests: write
+      checks: read
 
     steps:
-      - name: Install GH CLI
-        run: sudo apt install gh -y
-
-      - name: Authenticate GH CLI
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
-
-      - name: Merge pull request into main
-        run: |
-          gh pr merge ${{ github.event.pull_request.number }} --squash --auto
+      - name: Attempt Auto-merge
+        uses: pascalgn/automerge-action@v0.15.6
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          MERGE_LABELS: ""
+          MERGE_METHOD: "squash"
+          MERGE_COMMIT_MESSAGE: "pull-request-title"
+          MERGE_DELETE_BRANCH: "true"
+          MERGE_RETRIES: "6"
+          MERGE_RETRY_SLEEP: "10000"
+          UPDATE_LABELS: ""
+          UPDATE_METHOD: "rebase"
