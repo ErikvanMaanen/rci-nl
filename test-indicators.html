@@ -25,7 +25,7 @@
             <tr>
                 <td>Data Fetch: <span id="dataFetchStatus" class="status-dot">●</span></td>
                 <td>Tests: <span id="testStatus" class="status-dot">●</span></td>
-                <td></td>
+                <td>Startup: <span id="startupStatus" class="status-dot">●</span></td>
                 <td></td>
             </tr>
         </table>
@@ -94,6 +94,14 @@
             if (el) {
                 el.style.color = ok ? '#4CAF50' : '#F44336';
                 el.title = ok ? 'All tests pass' : 'Tests failed' + (error ? ': ' + error : '');
+            }
+        }
+
+        function setStartupStatus(ok) {
+            const el = document.getElementById('startupStatus');
+            if (el) {
+                el.style.color = ok ? '#4CAF50' : '#F44336';
+                el.title = ok ? 'Startup complete' : 'Startup running';
             }
         }
 
@@ -258,12 +266,14 @@
                 });
                 log(`=== TESTS FAILED: ${failed.length}/${results.length} - ${errors} ===`);
             }
+            setStartupStatus(true);
         }
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             log('Indicator test page loaded');
             checkDbStatus();
+            setStartupStatus(false);
             
             // Auto-run tests after a short delay
             setTimeout(() => {

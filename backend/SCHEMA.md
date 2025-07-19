@@ -24,7 +24,7 @@ The database includes automatic schema versioning and migration capabilities.
 **Indexes**:
 - Primary key on `version`
 
-### 2. devices
+### 2. RIBS_devices
 **Purpose**: Store registered device information and nicknames
 
 | Column | Type | Constraints | Description |
@@ -39,7 +39,7 @@ The database includes automatic schema versioning and migration capabilities.
 **Relationships**:
 - Referenced by `RIBS_Data.device_id`
 
-### 3. logs
+### 3. RIBS_logs
 **Purpose**: Store application logs from all sources (server, frontend, API, etc.)
 
 | Column | Type | Constraints | Description |
@@ -71,7 +71,7 @@ The database includes automatic schema versioning and migration capabilities.
 | direction | FLOAT | NOT NULL | Heading/direction of travel (degrees) |
 | roughness | FLOAT | NOT NULL | Calculated roughness index (RMS acceleration) |
 | distance_m | FLOAT | NOT NULL | Total distance traveled by device (meters) |
-| device_id | NVARCHAR(100) | NOT NULL | Reference to devices.id |
+| device_id | NVARCHAR(100) | NOT NULL | Reference to RIBS_devices.id |
 | ip_address | NVARCHAR(45) | NOT NULL | IP address of the uploading client |
 | z_values | NVARCHAR(MAX) | NOT NULL | JSON array of raw Z-axis acceleration values |
 | avg_speed | FLOAT | NOT NULL | Average speed during measurement window (m/s) |
@@ -86,19 +86,19 @@ The database includes automatic schema versioning and migration capabilities.
 - `IX_ribs_location` on `(latitude, longitude)` for spatial queries
 
 **Relationships**:
-- `device_id` references `devices.id`
+- `device_id` references `RIBS_devices.id`
 
 ## Schema Version History
 
 ### Version 1.0.0 (Initial)
-- Created basic tables: `devices`, `logs`, `RIBS_Data`
+- Created basic tables: `RIBS_devices`, `RIBS_logs`, `RIBS_Data`
 - Basic primary key constraints
 
 ### Version 1.1.0
 - Added performance indexes to `RIBS_Data` table:
   - `IX_ribs_device_time` for device-specific queries
   - `IX_ribs_location` for spatial queries
-- Added `IX_logs_time_level` index to `logs` table
+- Added `IX_logs_time_level` index to `RIBS_logs` table
 
 ### Version 1.2.0 (Current)
 - Added new measurement columns to `RIBS_Data`:
@@ -117,9 +117,9 @@ The database automatically applies schema migrations on startup:
 
 ## Performance Considerations
 
-### Indexes
+-### Indexes
 - All tables have appropriate indexes for common query patterns
-- `logs` table includes time-based index for efficient log retrieval
+- `RIBS_logs` table includes time-based index for efficient log retrieval
 - `RIBS_Data` table includes spatial and device-specific indexes
 
 ### Cleanup

@@ -89,6 +89,7 @@ const logFetchStatus = document.getElementById('logFetchStatus');
 const dataWriteStatus = document.getElementById('dataWriteStatus');
 const dataFetchStatus = document.getElementById('dataFetchStatus');
 const testStatus = document.getElementById('testStatus');
+const startupStatus = document.getElementById('startupStatus');
 let chartData = [];
 // --- Status Indicator Helpers ---
 function setLocationStatus(ok) {
@@ -147,6 +148,14 @@ function setTestStatus(ok, error = '') {
   }
 }
 
+function setStartupStatus(ok) {
+  if (startupStatus) {
+    startupStatus.style.color = ok ? '#4CAF50' : '#F44336';
+    startupStatus.textContent = '●';
+    startupStatus.title = ok ? t('startupOkTitle') : t('startupErrorTitle');
+  }
+}
+
 setLocationStatus(false); // Default: not receiving
 setDbStatus(false); // Default: not connected
 setLogWriteStatus(false); // Default: not tested
@@ -154,6 +163,7 @@ setLogFetchStatus(false); // Default: not tested
 setDataWriteStatus(false); // Default: not tested
 setDataFetchStatus(false); // Default: not tested
 setTestStatus(false); // Default: not tested
+setStartupStatus(false);
 
 let watchId;
 let recording = false;
@@ -456,6 +466,7 @@ async function runStartupTests() {
     });
     frontendLog(`Startup tests failed: ${failed.length}/${results.length} - ${errors}`, 'ERROR', 'STARTUP_TESTS');
   }
+  setStartupStatus(true);
 }
 
 async function testLogWriting() {
