@@ -237,6 +237,46 @@ app.get('/api/rci-data', async (req, res) => {
   }
 });
 
+// Endpoint to get database summaries
+app.get('/api/dbinfo', async (req, res) => {
+  try {
+    const info = await database.getDatabaseInfo();
+    res.json(info);
+  } catch (err) {
+    await logger.error(`Error retrieving database info: ${err.message}`, 'API');
+    res.status(500).json({ error: 'failed' });
+  }
+});
+
+// Endpoint to fetch latest records from a table
+app.get('/api/db/:table/latest', async (req, res) => {
+  const table = req.params.table;
+  const limit = parseInt(req.query.limit) || 10;
+  try {
+    const records = await database.getLatestRecords(table, limit);
+    res.json(records);
+  } catch (err) {
+    await logger.error(`Error retrieving latest from ${table}: ${err.message}`, 'API');
+    res.status(500).json({ error: 'failed' });
+  }
+});
+
+// Endpoint to run test on a table
+app.post('/api/db/:table/test', async (req, res) => {
+  const table = req.params.table;
+  try {
+    const result = await database.testTable(table);
+    if (result.success) {
+      res.json(result);
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (err) {
+    await logger.error(`Table test for ${table} failed: ${err.message}`, 'API');
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Global error handling middleware
 app.use(async (err, req, res, next) => {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
