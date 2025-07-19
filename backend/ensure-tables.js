@@ -28,12 +28,12 @@ async function ensureTables() {
     
     // Create/update all tables
     await database.ensureDevicesTable();
-    console.log('[DB] devices table checked/created');
-    await log('Devices table ensured', 'INFO', 'SCHEMA');
-    
+    console.log('[DB] RIBS_devices table checked/created');
+    await log('RIBS_devices table ensured', 'INFO', 'SCHEMA');
+
     await database.ensureLogsTable();
-    console.log('[DB] logs table checked/created');
-    await log('Logs table ensured', 'INFO', 'SCHEMA');
+    console.log('[DB] RIBS_logs table checked/created');
+    await log('RIBS_logs table ensured', 'INFO', 'SCHEMA');
     
     await database.ensureRibsDataTable();
     console.log('[DB] RIBS_Data table checked/created');

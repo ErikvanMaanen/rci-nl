@@ -15,7 +15,7 @@ const CURRENT_SCHEMA_VERSION = '1.2.0';
  */
 
 /**
- * TABLE: devices
+ * TABLE: RIBS_devices
  * Purpose: Store registered device information and nicknames
  * 
  * Columns:
@@ -222,8 +222,8 @@ async function ensureSchemaVersionTable() {
  */
 async function ensureDevicesTable() {
   const createDevices = `
-    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='devices' AND xtype='U')
-    CREATE TABLE devices (
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='RIBS_devices' AND xtype='U')
+    CREATE TABLE RIBS_devices (
       id NVARCHAR(100) PRIMARY KEY,
       registered_at DATETIME NOT NULL,
       nickname NVARCHAR(100) NULL
@@ -231,13 +231,13 @@ async function ensureDevicesTable() {
   `;
 
   const addNicknameColumn = `
-    IF EXISTS (SELECT * FROM sysobjects WHERE name='devices' AND xtype='U')
+    IF EXISTS (SELECT * FROM sysobjects WHERE name='RIBS_devices' AND xtype='U')
     AND NOT EXISTS (
       SELECT * FROM sys.columns
       WHERE Name = N'nickname'
-        AND Object_ID = Object_ID('devices')
+        AND Object_ID = Object_ID('RIBS_devices')
     )
-    ALTER TABLE devices ADD nickname NVARCHAR(100) NULL;
+    ALTER TABLE RIBS_devices ADD nickname NVARCHAR(100) NULL;
   `;
 
   await executeQuery(createDevices);
@@ -249,8 +249,8 @@ async function ensureDevicesTable() {
  */
 async function ensureLogsTable() {
   const createLogs = `
-    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='logs' AND xtype='U')
-    CREATE TABLE logs (
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='RIBS_logs' AND xtype='U')
+    CREATE TABLE RIBS_logs (
       id INT IDENTITY(1,1) PRIMARY KEY,
       message NVARCHAR(MAX) NOT NULL,
       log_time DATETIME NOT NULL,
@@ -260,8 +260,8 @@ async function ensureLogsTable() {
   `;
 
   const createLogsIndex = `
-    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_logs_time_level' AND object_id = OBJECT_ID('logs'))
-    CREATE INDEX IX_logs_time_level ON logs(log_time DESC, level);
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_logs_time_level' AND object_id = OBJECT_ID('RIBS_logs'))
+    CREATE INDEX IX_logs_time_level ON RIBS_logs(log_time DESC, level);
   `;
 
   await executeQuery(createLogs);
@@ -436,7 +436,7 @@ async function insertLog(message, level = 'INFO', source = 'SERVER') {
     throw new Error('Database not ready');
   }
 
-  await query`INSERT INTO logs(message, log_time, level, source) VALUES(${message}, GETDATE(), ${level}, ${source})`;
+  await query`INSERT INTO RIBS_logs(message, log_time, level, source) VALUES(${message}, GETDATE(), ${level}, ${source})`;
 }
 
 /**
@@ -451,7 +451,7 @@ async function getLogs(options = {}) {
     throw new Error('Database not ready');
   }
 
-  let queryText = 'SELECT TOP (@limit) id, log_time, message, level, source FROM logs';
+  let queryText = 'SELECT TOP (@limit) id, log_time, message, level, source FROM RIBS_logs';
   const params = { limit: sql.Int, limitValue: Math.min(parseInt(limit) || 100, 1000) };
   const conditions = [];
 
@@ -524,7 +524,7 @@ async function getLogStats() {
       source,
       COUNT(*) as count,
       MAX(log_time) as latest_log
-    FROM logs 
+    FROM RIBS_logs
     GROUP BY level, source
     ORDER BY count DESC
   `);
@@ -541,9 +541,9 @@ async function cleanupOldLogs() {
   }
 
   await executeQuery(`
-    DELETE FROM logs
+    DELETE FROM RIBS_logs
     WHERE id NOT IN (
-      SELECT TOP 1000 id FROM logs ORDER BY log_time DESC
+      SELECT TOP 1000 id FROM RIBS_logs ORDER BY log_time DESC
     )
   `);
 }
@@ -556,7 +556,7 @@ async function clearLogs() {
     throw new Error('Database not ready');
   }
 
-  await executeQuery('DELETE FROM logs');
+  await executeQuery('DELETE FROM RIBS_logs');
 }
 
 // ===== DEVICE OPERATIONS =====
@@ -571,7 +571,7 @@ async function getDevice(deviceId) {
     throw new Error('Database not ready');
   }
 
-  const result = await query`SELECT id as device_id, nickname FROM devices WHERE id = ${deviceId}`;
+  const result = await query`SELECT id as device_id, nickname FROM RIBS_devices WHERE id = ${deviceId}`;
   return result.recordset.length > 0 ? result.recordset[0] : null;
 }
 
@@ -584,7 +584,7 @@ async function getAllDevices() {
     throw new Error('Database not ready');
   }
 
-  const result = await query`SELECT id as device_id, nickname FROM devices ORDER BY nickname`;
+  const result = await query`SELECT id as device_id, nickname FROM RIBS_devices ORDER BY nickname`;
   return result.recordset;
 }
 
@@ -599,7 +599,7 @@ async function registerDevice(deviceId, nickname = null) {
   }
 
   await query`
-    MERGE devices AS target
+    MERGE RIBS_devices AS target
     USING (SELECT ${deviceId} AS id, ${nickname} AS nickname) AS src
     ON target.id = src.id
     WHEN MATCHED THEN
@@ -723,8 +723,8 @@ async function getSchemaStatus() {
  */
 async function getDatabaseInfo() {
   const tables = [
-    { name: 'devices', column: 'registered_at' },
-    { name: 'logs', column: 'log_time' },
+    { name: 'RIBS_devices', column: 'registered_at' },
+    { name: 'RIBS_logs', column: 'log_time' },
     { name: 'RIBS_Data', column: 'timestamp' }
   ];
 
@@ -761,11 +761,11 @@ async function getLatestRecords(table, limit = 10) {
   let columns = '*';
   let orderBy = 'id DESC';
   switch (table) {
-    case 'devices':
+    case 'RIBS_devices':
       columns = 'id, nickname, registered_at';
       orderBy = 'registered_at DESC';
       break;
-    case 'logs':
+    case 'RIBS_logs':
       columns = 'id, message, log_time, level, source';
       orderBy = 'id DESC';
       break;
@@ -796,19 +796,19 @@ async function testTable(table) {
     await transaction.begin();
     const request = transaction.request();
 
-    if (table === 'logs') {
+    if (table === 'RIBS_logs') {
       await request.query(
-        "INSERT INTO logs(message, log_time, level, source) VALUES('test1', GETDATE(), 'INFO', 'TEST');"
+        "INSERT INTO RIBS_logs(message, log_time, level, source) VALUES('test1', GETDATE(), 'INFO', 'TEST');"
       );
       await request.query(
-        "INSERT INTO logs(message, log_time, level, source) VALUES('test2', GETDATE(), 'INFO', 'TEST');"
+        "INSERT INTO RIBS_logs(message, log_time, level, source) VALUES('test2', GETDATE(), 'INFO', 'TEST');"
       );
-    } else if (table === 'devices') {
+    } else if (table === 'RIBS_devices') {
       await request.query(
-        "INSERT INTO devices(id, registered_at, nickname) VALUES('test-device-1', GETDATE(), 'test1');"
+        "INSERT INTO RIBS_devices(id, registered_at, nickname) VALUES('test-device-1', GETDATE(), 'test1');"
       );
       await request.query(
-        "INSERT INTO devices(id, registered_at, nickname) VALUES('test-device-2', GETDATE(), 'test2');"
+        "INSERT INTO RIBS_devices(id, registered_at, nickname) VALUES('test-device-2', GETDATE(), 'test2');"
       );
     } else if (table === 'RIBS_Data') {
       const insert =

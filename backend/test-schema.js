@@ -64,7 +64,7 @@ async function testSchemaManagement() {
       console.log('   ✓ Documentation size:', schemaContent.length, 'characters');
       
       // Check if it contains key sections
-      const sections = ['Overview', 'schema_version', 'devices', 'logs', 'RIBS_Data'];
+      const sections = ['Overview', 'schema_version', 'RIBS_devices', 'RIBS_logs', 'RIBS_Data'];
       sections.forEach(section => {
         if (schemaContent.includes(section)) {
           console.log(`   ✓ Contains ${section} section`);

@@ -6,6 +6,7 @@ const logFetchStatus = document.getElementById('logFetchStatus');
 const dataWriteStatus = document.getElementById('dataWriteStatus');
 const dataFetchStatus = document.getElementById('dataFetchStatus');
 const testStatus = document.getElementById('testStatus');
+const startupStatus = document.getElementById('startupStatus');
 
 function tr(key){
   return (typeof t === 'function') ? t(key) : key;
@@ -26,6 +27,7 @@ function setLogFetchStatus(ok, error=''){ setStatus(logFetchStatus, ok, 'logFetc
 function setDataWriteStatus(ok, error=''){ setStatus(dataWriteStatus, ok, 'dataWriteOkTitle', 'dataWriteErrorTitle', error); }
 function setDataFetchStatus(ok, error=''){ setStatus(dataFetchStatus, ok, 'dataFetchOkTitle', 'dataFetchErrorTitle', error); }
 function setTestStatus(ok, error=''){ setStatus(testStatus, ok, 'testOkTitle', 'testErrorTitle', error); }
+function setStartupStatus(ok, error=''){ setStatus(startupStatus, ok, 'startupOkTitle', 'startupErrorTitle', error); }
 
 setDbStatus(false);
 setLogWriteStatus(false);
@@ -33,6 +35,7 @@ setLogFetchStatus(false);
 setDataWriteStatus(false);
 setDataFetchStatus(false);
 setTestStatus(false);
+setStartupStatus(false);
 
 function getDeviceId(){
   let id = localStorage.getItem('device_id');
@@ -147,6 +150,7 @@ async function runStartupTests(){
     const errors = failed.map(r => r.reason?.message || r.reason).join(', ');
     setTestStatus(false, errors);
   }
+  setStartupStatus(true);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

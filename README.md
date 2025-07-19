@@ -11,7 +11,7 @@ Deze repository bevat een voorbeeldimplementatie van een Progressive Web App (PW
 
 Het systeem bevat een uitgebreid logging mechanisme:
 
-- **Centralized Logging**: Alle logs worden opgeslagen in de `logs` tabel in de database
+ - **Centralized Logging**: Alle logs worden opgeslagen in de `RIBS_logs` tabel in de database
 - **Multiple Sources**: Logs van server, API, database, frontend en errors worden allemaal vastgelegd
 - **Log Levels**: INFO, WARN, ERROR, DEBUG
 - **Frontend Integration**: Frontend errors en events worden automatisch naar de backend gestuurd
@@ -26,7 +26,7 @@ Het systeem bevat een uitgebreid logging mechanisme:
 
 ### Database Schema
 
-De `logs` tabel wordt automatisch aangemaakt bij startup en bevat:
+De `RIBS_logs` tabel wordt automatisch aangemaakt bij startup en bevat:
 - `id` (INT, auto-increment, primary key)
 - `message` (NVARCHAR(MAX), het log bericht)
 - `log_time` (DATETIME, timestamp)
@@ -65,7 +65,7 @@ Het systeem bevat automatisch schema-beheer en migratie ondersteuning:
 
 ### Schema Versie Geschiedenis
 
-- **v1.0.0**: Basis tabellen (devices, logs, RIBS_Data)
+- **v1.0.0**: Basis tabellen (RIBS_devices, RIBS_logs, RIBS_Data)
 - **v1.1.0**: Performance indexes toegevoegd
 - **v1.2.0**: VDV en crest_factor metingen toegevoegd
 
