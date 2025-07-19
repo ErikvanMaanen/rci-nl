@@ -25,18 +25,16 @@
     <div id="status-indicators" style="margin-bottom:8px; font-size:12px;">
       <table class="status-table" style="border-collapse:collapse;">
         <tr>
-          <td data-i18n="dbStatusLabel"></td>
-          <td><span id="dbStatus" class="status-dot" title="Database status">●</span></td>
-          <td data-i18n="logWriteStatusLabel"></td>
-          <td><span id="logWriteStatus" class="status-dot" title="Log writing status">●</span></td>
-          <td data-i18n="logFetchStatusLabel"></td>
-          <td><span id="logFetchStatus" class="status-dot" title="Log fetching status">●</span></td>
-          <td data-i18n="dataWriteStatusLabel"></td>
-          <td><span id="dataWriteStatus" class="status-dot" title="Data writing status">●</span></td>
-          <td data-i18n="dataFetchStatusLabel"></td>
-          <td><span id="dataFetchStatus" class="status-dot" title="Data fetching status">●</span></td>
-          <td data-i18n="testStatusLabel"></td>
-          <td><span id="testStatus" class="status-dot" title="Test status">●</span></td>
+          <td><span data-i18n="dbStatusLabel"></span> <span id="dbStatus" class="status-dot" title="Database status">●</span></td>
+          <td><span data-i18n="logWriteStatusLabel"></span> <span id="logWriteStatus" class="status-dot" title="Log writing status">●</span></td>
+          <td><span data-i18n="logFetchStatusLabel"></span> <span id="logFetchStatus" class="status-dot" title="Log fetching status">●</span></td>
+          <td><span data-i18n="dataWriteStatusLabel"></span> <span id="dataWriteStatus" class="status-dot" title="Data writing status">●</span></td>
+        </tr>
+        <tr>
+          <td><span data-i18n="dataFetchStatusLabel"></span> <span id="dataFetchStatus" class="status-dot" title="Data fetching status">●</span></td>
+          <td><span data-i18n="testStatusLabel"></span> <span id="testStatus" class="status-dot" title="Test status">●</span></td>
+          <td></td>
+          <td></td>
         </tr>
       </table>
     </div>
@@ -100,6 +98,18 @@
       <div class="legend-item"><div class="legend-color" style="background-color: hsl(80,100%,50%);"></div>Medium (2-5)</div>
       <div class="legend-item"><div class="legend-color" style="background-color: hsl(40,100%,50%);"></div>High (5-8)</div>
       <div class="legend-item"><div class="legend-color" style="background-color: hsl(0,100%,50%);"></div>Very High (8+)</div>
+    </div>
+    <div class="log-filters">
+      <label for="logLevelFilter">Level:</label>
+      <select id="logLevelFilter">
+        <option value="">All</option>
+        <option value="INFO">INFO</option>
+        <option value="WARN">WARN</option>
+        <option value="ERROR">ERROR</option>
+        <option value="DEBUG">DEBUG</option>
+      </select>
+      <label for="logSourceFilter">Source:</label>
+      <input id="logSourceFilter" type="text" placeholder="Source" />
     </div>
     <div id="log" class="log"></div>
     <script src="i18n.js"></script>

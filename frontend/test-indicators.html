@@ -15,20 +15,20 @@
     
     <div class="test-section">
         <h2>Current Status</h2>
-        <div>
-            <span>Database:</span>
-            <span id="dbStatus" class="status-dot">●</span>
-            <span>Log Write:</span>
-            <span id="logWriteStatus" class="status-dot">●</span>
-            <span>Log Fetch:</span>
-            <span id="logFetchStatus" class="status-dot">●</span>
-            <span>Data Write:</span>
-            <span id="dataWriteStatus" class="status-dot">●</span>
-            <span>Data Fetch:</span>
-            <span id="dataFetchStatus" class="status-dot">●</span>
-            <span>Tests:</span>
-            <span id="testStatus" class="status-dot">●</span>
-        </div>
+        <table class="status-table" style="border-collapse:collapse;">
+            <tr>
+                <td>Database: <span id="dbStatus" class="status-dot">●</span></td>
+                <td>Log Write: <span id="logWriteStatus" class="status-dot">●</span></td>
+                <td>Log Fetch: <span id="logFetchStatus" class="status-dot">●</span></td>
+                <td>Data Write: <span id="dataWriteStatus" class="status-dot">●</span></td>
+            </tr>
+            <tr>
+                <td>Data Fetch: <span id="dataFetchStatus" class="status-dot">●</span></td>
+                <td>Tests: <span id="testStatus" class="status-dot">●</span></td>
+                <td></td>
+                <td></td>
+            </tr>
+        </table>
     </div>
 
     <div class="test-section">
@@ -234,7 +234,7 @@
         async function runAllTests() {
             log('=== Running all tests ===');
             const tests = [testLogWrite, testLogFetch, testDataWrite, testDataFetch];
-            
+
             const results = await Promise.allSettled(tests.map(test => test()));
             
             const failed = results.filter(r => r.status === 'rejected');
@@ -246,6 +246,16 @@
             } else {
                 const errors = failed.map(r => r.reason?.message || r.reason).join(', ');
                 setTestStatus(false, `${failed.length} failed`);
+                failed.forEach((r, idx) => {
+                    const name = tests[idx].name || `test${idx}`;
+                    const msg = `Test ${name} failed: ${r.reason?.message || r.reason}`;
+                    log(msg);
+                    fetch('/api/logs', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ message: msg, level: 'DEBUG', source: 'TEST_PAGE' })
+                    }).catch(() => {});
+                });
                 log(`=== TESTS FAILED: ${failed.length}/${results.length} - ${errors} ===`);
             }
         }
