@@ -694,6 +694,124 @@ async function getSchemaStatus() {
   }
 }
 
+// ===== MAINTENANCE HELPERS =====
+
+/**
+ * Get record count and last update timestamp for major tables
+ * @returns {Promise<Array>} summary info
+ */
+async function getDatabaseInfo() {
+  const tables = [
+    { name: 'devices', column: 'registered_at' },
+    { name: 'logs', column: 'log_time' },
+    { name: 'RIBS_Data', column: 'timestamp' }
+  ];
+
+  const summaries = [];
+  for (const tbl of tables) {
+    try {
+      const result = await executeQuery(`
+        SELECT COUNT(*) AS count, MAX(${tbl.column}) AS last_update
+        FROM ${tbl.name}
+      `);
+      const row = result.recordset[0] || {};
+      summaries.push({
+        name: tbl.name,
+        count: row.count || 0,
+        last_update: row.last_update
+      });
+    } catch (err) {
+      summaries.push({ name: tbl.name, error: err.message });
+    }
+  }
+  return summaries;
+}
+
+/**
+ * Retrieve the latest records for a table
+ * @param {string} table - table name
+ * @param {number} limit - number of records
+ * @returns {Promise<Array>}
+ */
+async function getLatestRecords(table, limit = 10) {
+  if (!isDatabaseReady()) throw new Error('Database not ready');
+
+  const safeLimit = Math.min(parseInt(limit) || 10, 100);
+  let columns = '*';
+  let orderBy = 'id DESC';
+  switch (table) {
+    case 'devices':
+      columns = 'id, nickname, registered_at';
+      orderBy = 'registered_at DESC';
+      break;
+    case 'logs':
+      columns = 'id, message, log_time, level, source';
+      orderBy = 'id DESC';
+      break;
+    case 'RIBS_Data':
+      columns = 'id, timestamp, device_id, latitude, longitude, roughness';
+      orderBy = 'id DESC';
+      break;
+  }
+
+  const result = await executeQuery(
+    `SELECT TOP (${safeLimit}) ${columns} FROM ${table} ORDER BY ${orderBy}`
+  );
+  return result.recordset;
+}
+
+/**
+ * Run a simple insert/select/delete test on a table
+ * @param {string} table
+ * @returns {Promise<Object>} result
+ */
+async function testTable(table) {
+  if (!isDatabaseReady()) throw new Error('Database not ready');
+
+  const pool = getConnectionPool();
+  const transaction = new sql.Transaction(pool);
+
+  try {
+    await transaction.begin();
+    const request = transaction.request();
+
+    if (table === 'logs') {
+      await request.query(
+        "INSERT INTO logs(message, log_time, level, source) VALUES('test1', GETDATE(), 'INFO', 'TEST');"
+      );
+      await request.query(
+        "INSERT INTO logs(message, log_time, level, source) VALUES('test2', GETDATE(), 'INFO', 'TEST');"
+      );
+    } else if (table === 'devices') {
+      await request.query(
+        "INSERT INTO devices(id, registered_at, nickname) VALUES('test-device-1', GETDATE(), 'test1');"
+      );
+      await request.query(
+        "INSERT INTO devices(id, registered_at, nickname) VALUES('test-device-2', GETDATE(), 'test2');"
+      );
+    } else if (table === 'RIBS_Data') {
+      const insert =
+        "INSERT INTO RIBS_Data(timestamp, latitude, longitude, speed, direction, roughness, distance_m, device_id, ip_address, z_values, avg_speed, interval_s, algorithm_version, vdv, crest_factor)" +
+        " VALUES(GETDATE(), 0, 0, 0, 0, 0, 0, 'test-device', '0.0.0.0', '[]', 0, 1, 'test', NULL, NULL);";
+      await request.query(insert);
+      await request.query(insert);
+    } else {
+      throw new Error('Unsupported table');
+    }
+
+    const records = (
+      await request.query(`SELECT TOP (2) * FROM ${table} ORDER BY id DESC`)
+    ).recordset;
+    await transaction.rollback();
+    return { success: true, records };
+  } catch (err) {
+    try {
+      await transaction.rollback();
+    } catch (_) {}
+    return { success: false, error: err.message };
+  }
+}
+
 // ===== GRACEFUL SHUTDOWN =====
 
 /**
@@ -743,10 +861,13 @@ module.exports = {
   // RIBS data operations
   insertRibsData,
   getRibsData,
-  
+
   // Schema management
   getSchemaStatus,
-  
+  getDatabaseInfo,
+  getLatestRecords,
+  testTable,
+
   // SQL types (for compatibility)
   sql,
   

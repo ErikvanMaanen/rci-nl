@@ -52,6 +52,15 @@
     <p>Loading schema information...</p>
   </div>
 
+  <h2>Database Info</h2>
+  <button id="refreshDbBtn">Refresh</button>
+  <table id="dbInfoTable" class="status-table" style="border-collapse:collapse;">
+    <thead>
+      <tr><th>Table</th><th>Records</th><th>Last Update</th><th colspan="2">Actions</th></tr>
+    </thead>
+    <tbody id="dbTableBody"></tbody>
+  </table>
+
   <h2>Main Functions</h2>
   <ul>
     <li><strong>Backend</strong>
@@ -89,6 +98,7 @@
   <script src="i18n.js"></script>
   <script src="logs.js"></script>
   <script src="main.js"></script>
+  <script src="maintenance.js"></script>
   <script>
     // Load schema status information
     async function loadSchemaStatus() {

@@ -5,6 +5,11 @@
   font-size: 12px;
   border: none;
 }
+.status-table th {
+  padding-right: 6px;
+  text-align: left;
+  font-size: 12px;
+}
 .log-filters {
   margin-top: 5px;
   font-size: 12px;
