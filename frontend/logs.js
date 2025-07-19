@@ -1,7 +1,14 @@
+let currentLevelFilter = '';
+let currentSourceFilter = '';
+
 function fetchLogs(){
   const logDiv = document.getElementById('log');
   if(!logDiv) return;
-  fetch('/api/logs')
+  const params = new URLSearchParams();
+  if(currentLevelFilter) params.append('level', currentLevelFilter);
+  if(currentSourceFilter) params.append('source', currentSourceFilter);
+  const query = params.toString() ? `?${params.toString()}` : '';
+  fetch('/api/logs' + query)
     .then(r => r.json())
     .then(list => {
       logDiv.innerHTML = list.map(l => {
@@ -37,6 +44,24 @@ function fetchLogs(){
 }
 
 if (typeof window !== 'undefined') {
-  setInterval(fetchLogs, 5000);
-  fetchLogs();
+  document.addEventListener('DOMContentLoaded', () => {
+    const levelSelect = document.getElementById('logLevelFilter');
+    const sourceInput = document.getElementById('logSourceFilter');
+    if(levelSelect){
+      currentLevelFilter = levelSelect.value;
+      levelSelect.addEventListener('change', () => {
+        currentLevelFilter = levelSelect.value;
+        fetchLogs();
+      });
+    }
+    if(sourceInput){
+      currentSourceFilter = sourceInput.value;
+      sourceInput.addEventListener('input', () => {
+        currentSourceFilter = sourceInput.value;
+        fetchLogs();
+      });
+    }
+    fetchLogs();
+    setInterval(fetchLogs, 5000);
+  });
 }

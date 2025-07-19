@@ -440,16 +440,20 @@ async function runStartupTests() {
   ];
   
   const results = await Promise.allSettled(tests.map(test => test()));
-  
+
   const failed = results.filter(r => r.status === 'rejected');
   const passed = results.filter(r => r.status === 'fulfilled');
-  
+
   if (failed.length === 0) {
     setTestStatus(true);
     frontendLog(`All startup tests passed (${passed.length}/${results.length})`, 'INFO', 'STARTUP_TESTS');
   } else {
     const errors = failed.map(r => r.reason?.message || r.reason).join(', ');
     setTestStatus(false, errors);
+    failed.forEach((r, idx) => {
+      const name = tests[idx].name || `test${idx}`;
+      frontendLog(`Test ${name} failed: ${r.reason?.message || r.reason}`, 'DEBUG', 'STARTUP_TESTS');
+    });
     frontendLog(`Startup tests failed: ${failed.length}/${results.length} - ${errors}`, 'ERROR', 'STARTUP_TESTS');
   }
 }
