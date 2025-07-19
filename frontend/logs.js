@@ -43,10 +43,31 @@ function fetchLogs(){
     });
 }
 
+function clearLogs() {
+  if (!confirm('Clear all logs?')) return;
+  fetch('/api/logs', { method: 'DELETE' })
+    .then(res => {
+      if (res.ok) {
+        fetchLogs();
+        if (typeof frontendLog === 'function') {
+          frontendLog('Logs cleared', 'INFO', 'MAINTENANCE');
+        }
+      } else if (typeof frontendLog === 'function') {
+        frontendLog(`Failed to clear logs: HTTP ${res.status}`, 'ERROR', 'MAINTENANCE');
+      }
+    })
+    .catch(err => {
+      if (typeof frontendLog === 'function') {
+        frontendLog(`Failed to clear logs: ${err.message}`, 'ERROR', 'MAINTENANCE');
+      }
+    });
+}
+
 if (typeof window !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
     const levelSelect = document.getElementById('logLevelFilter');
     const sourceInput = document.getElementById('logSourceFilter');
+    const clearBtn = document.getElementById('clearLogsBtn');
     if(levelSelect){
       currentLevelFilter = levelSelect.value;
       levelSelect.addEventListener('change', () => {
@@ -60,6 +81,9 @@ if (typeof window !== 'undefined') {
         currentSourceFilter = sourceInput.value;
         fetchLogs();
       });
+    }
+    if(clearBtn){
+      clearBtn.addEventListener('click', clearLogs);
     }
     fetchLogs();
     setInterval(fetchLogs, 5000);

@@ -196,6 +196,25 @@ app.post('/api/logs', async (req, res) => {
     await logger.error(`Error logging frontend message from IP ${ip}: ${err.message}`, 'API');
     res.status(500).json({ error: 'Failed to log message' });
   }
+  });
+
+// Endpoint to clear all logs
+app.delete('/api/logs', async (req, res) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+  if (!database.isDatabaseReady()) {
+    await logger.warn('Database not ready, cannot clear logs', 'API');
+    return res.status(503).send('Database not ready');
+  }
+
+  try {
+    await database.clearLogs();
+    await logger.api('Logs cleared', `IP: ${ip}`);
+    res.sendStatus(200);
+  } catch (err) {
+    await logger.error(`Error clearing logs for IP ${ip}: ${err.message}`, 'API');
+    res.status(500).send('error');
+  }
 });
 
 // Endpoint to retrieve measurement records for map view

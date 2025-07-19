@@ -22,6 +22,7 @@ Het systeem bevat een uitgebreid logging mechanisme:
 - `GET /api/logs` - Haal logs op (met filtering op level, source, limit)
 - `POST /api/logs` - Verstuur frontend logs naar database
 - `GET /api/logs/stats` - Krijg statistieken over logs
+- `DELETE /api/logs` - Verwijder alle logregels
 
 ### Database Schema
 

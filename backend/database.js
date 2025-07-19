@@ -520,11 +520,22 @@ async function cleanupOldLogs() {
   }
 
   await executeQuery(`
-    DELETE FROM logs 
+    DELETE FROM logs
     WHERE id NOT IN (
       SELECT TOP 1000 id FROM logs ORDER BY log_time DESC
     )
   `);
+}
+
+/**
+ * Remove all log entries
+ */
+async function clearLogs() {
+  if (!isDatabaseReady()) {
+    throw new Error('Database not ready');
+  }
+
+  await executeQuery('DELETE FROM logs');
 }
 
 // ===== DEVICE OPERATIONS =====
@@ -722,6 +733,7 @@ module.exports = {
   getLogs,
   getLogStats,
   cleanupOldLogs,
+  clearLogs,
   
   // Device operations
   getDevice,
