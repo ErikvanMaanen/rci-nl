@@ -67,8 +67,7 @@ const logger = {
   // Request logging helper
   request: (req, additionalInfo = '') => {
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    const userAgent = req.headers['user-agent'] || 'Unknown';
-    const message = `${req.method} ${req.path} from IP ${ip} - User-Agent: ${userAgent}${additionalInfo ? ' - ' + additionalInfo : ''}`;
+    const message = `${req.method} ${req.path} from IP ${ip}${additionalInfo ? ' - ' + additionalInfo : ''}`;
     return log(message, 'INFO', 'REQUEST');
   },
   

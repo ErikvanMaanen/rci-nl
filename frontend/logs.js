@@ -1,18 +1,20 @@
-let currentLevelFilter = '';
-let currentSourceFilter = '';
+let currentLevelFilter = [];
+let currentSourceFilter = [];
+let currentApiFilter = [];
 
 function fetchLogs(){
   const logDiv = document.getElementById('log');
   if(!logDiv) return;
   const params = new URLSearchParams();
-  if(currentLevelFilter) params.append('level', currentLevelFilter);
-  if(currentSourceFilter) params.append('source', currentSourceFilter);
+  if(currentLevelFilter.length) params.append('level', currentLevelFilter.join(','));
+  if(currentSourceFilter.length) params.append('source', currentSourceFilter.join(','));
+  if(currentApiFilter.length) params.append('api', currentApiFilter.join(','));
   const query = params.toString() ? `?${params.toString()}` : '';
   fetch('/api/logs' + query)
     .then(r => r.json())
     .then(list => {
       logDiv.innerHTML = list.map(l => {
-        const time = new Date(l.log_time).toLocaleString();
+        const time = new Date(l.log_time).toISOString().replace('T',' ').slice(0,19);
         const levelClass = l.level ? l.level.toLowerCase() : 'info';
         const source = l.source ? `[${l.source}]` : '';
         return `<div class="log-entry log-${levelClass}">`+
@@ -66,19 +68,30 @@ function clearLogs() {
 if (typeof window !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
     const levelSelect = document.getElementById('logLevelFilter');
-    const sourceInput = document.getElementById('logSourceFilter');
+    const sourceSelect = document.getElementById('logSourceFilter');
+    const apiSelect = document.getElementById('logApiFilter');
     const clearBtn = document.getElementById('clearLogsBtn');
     if(levelSelect){
-      currentLevelFilter = levelSelect.value;
+      const getLevels = () => Array.from(levelSelect.selectedOptions).map(o => o.value).filter(Boolean);
+      currentLevelFilter = getLevels();
       levelSelect.addEventListener('change', () => {
-        currentLevelFilter = levelSelect.value;
+        currentLevelFilter = getLevels();
         fetchLogs();
       });
     }
-    if(sourceInput){
-      currentSourceFilter = sourceInput.value;
-      sourceInput.addEventListener('input', () => {
-        currentSourceFilter = sourceInput.value;
+    if(sourceSelect){
+      const getSources = () => Array.from(sourceSelect.selectedOptions).map(o => o.value).filter(Boolean);
+      currentSourceFilter = getSources();
+      sourceSelect.addEventListener('change', () => {
+        currentSourceFilter = getSources();
+        fetchLogs();
+      });
+    }
+    if(apiSelect){
+      const getApis = () => Array.from(apiSelect.selectedOptions).map(o => o.value).filter(Boolean);
+      currentApiFilter = getApis();
+      apiSelect.addEventListener('change', () => {
+        currentApiFilter = getApis();
         fetchLogs();
       });
     }
