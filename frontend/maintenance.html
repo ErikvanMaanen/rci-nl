@@ -53,12 +53,19 @@
   </div>
 
   <h2>Database Info</h2>
-  <button id="refreshDbBtn">Refresh</button>
-  <table id="dbInfoTable" class="status-table" style="border-collapse:collapse;">
+  <button id="refreshDbBtn">Refresh Database Info</button>
+  <table id="dbInfoTable" class="status-table" style="border-collapse:collapse; margin-top: 10px;">
     <thead>
-      <tr><th>Table</th><th>Records</th><th>Last Update</th><th colspan="2">Actions</th></tr>
+      <tr>
+        <th>Table</th>
+        <th>Records</th>
+        <th>Last Record</th>
+        <th>Actions</th>
+      </tr>
     </thead>
-    <tbody id="dbTableBody"></tbody>
+    <tbody id="dbTableBody">
+      <tr><td colspan="4">Loading database information...</td></tr>
+    </tbody>
   </table>
 
   <h2>Main Functions</h2>

@@ -93,3 +93,49 @@ canvas { border: 1px solid #ccc; }
 .lang-switch button {
   margin-left: 5px;
 }
+
+/* Database info table styling */
+#dbInfoTable {
+  width: 100%;
+  max-width: 800px;
+}
+
+#dbInfoTable th {
+  background-color: #f5f5f5;
+  font-weight: bold;
+  padding: 8px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+#dbInfoTable td {
+  padding: 8px;
+  border: 1px solid #ddd;
+  vertical-align: top;
+}
+
+#dbInfoTable button {
+  margin-right: 5px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+#dbInfoTable button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+#refreshDbBtn {
+  margin-bottom: 10px;
+  padding: 8px 16px;
+  background-color: #007cba;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#refreshDbBtn:hover {
+  background-color: #005a87;
+}
