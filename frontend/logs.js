@@ -1,7 +1,13 @@
 // Track current filter settings
 let currentLevelFilter = [];
 let currentSourceFilter = [];
-let currentApiFilter =[];
+let currentApiFilter = [];
+
+// Track the last log ID we've displayed to avoid duplicates
+let lastLogId = 0;
+
+// Auto-scroll flag controlled by user scroll position
+let autoScroll = true;
 
 function selectAllOptions(selectElement) {
   if (selectElement) {
@@ -46,26 +52,39 @@ function fetchLogs(){
       if (!newLogs || !Array.isArray(newLogs) || newLogs.length === 0) {
         return; // No new logs to display
       }
-      
-      // Generate HTML for new logs and replace content in log div
-      const newLogHtml = newLogs.map(l => {
+
+      // Sort logs chronologically oldest first
+      newLogs.sort((a, b) => a.id - b.id);
+
+      const fragment = document.createDocumentFragment();
+
+      newLogs.forEach(l => {
+        if (l.id <= lastLogId) return; // Skip logs we've already displayed
+
         const time = new Date(l.log_time).toLocaleString();
         const levelClass = l.level ? l.level.toLowerCase() : 'info';
         const source = l.source ? `[${l.source}]` : '';
-        return `<div class="log-entry log-${levelClass}">`+
-          `<span class="log-time">${time}</span>`+
-          `<span class="log-source">${source}</span>`+
-          `<span class="log-level">[${l.level || 'INFO'}]</span>`+
-          `<span class="log-message">${l.message}</span>`+
-          `</div>`;
-      }).join('');
-      
-      // Replace all logs with the fetched logs (since we don't have incremental fetching)
-      logDiv.innerHTML = newLogHtml;
-      
-      // Auto-scroll to bottom
-      logDiv.scrollTop = logDiv.scrollHeight;
-      
+        const div = document.createElement('div');
+        div.className = `log-entry log-${levelClass}`;
+        div.innerHTML =
+          `<span class="log-time">${time}</span>` +
+          `<span class="log-source">${source}</span>` +
+          `<span class="log-level">[${l.level || 'INFO'}]</span>` +
+          `<span class="log-message">${l.message}</span>`;
+        fragment.appendChild(div);
+
+        if (l.id > lastLogId) {
+          lastLogId = l.id;
+        }
+      });
+
+      if (fragment.childNodes.length > 0) {
+        logDiv.appendChild(fragment);
+        if (autoScroll) {
+          logDiv.scrollTop = logDiv.scrollHeight;
+        }
+      }
+
       // Update log fetch status
       if (typeof setLogFetchStatus === 'function') {
         setLogFetchStatus(true);
@@ -86,8 +105,10 @@ function fetchLogs(){
           <span class="log-message">Failed to fetch logs: ${err.message}</span>
         </div>`;
       
-      logDiv.innerHTML += errorHtml;
-      logDiv.scrollTop = logDiv.scrollHeight;
+      logDiv.insertAdjacentHTML('beforeend', errorHtml);
+      if (autoScroll) {
+        logDiv.scrollTop = logDiv.scrollHeight;
+      }
       
       // Also log to console/frontend log if available
       if (typeof frontendLog === 'function') {
@@ -103,6 +124,11 @@ function clearLogs() {
   fetch('/api/logs', { method: 'DELETE' })
     .then(res => {
       if (res.ok) {
+        lastLogId = 0;
+        const logDiv = document.getElementById('log');
+        if (logDiv) {
+          logDiv.innerHTML = '';
+        }
         fetchLogs();
         if (typeof frontendLog === 'function') {
           frontendLog('Logs cleared', 'INFO', 'MAINTENANCE');
@@ -124,6 +150,15 @@ if (typeof window !== 'undefined') {
     const sourceSelect = document.getElementById('logSourceFilter');
     const apiSelect = document.getElementById('logApiFilter');
     const clearBtn = document.getElementById('clearLogsBtn');
+    const logDiv = document.getElementById('log');
+
+    if (logDiv) {
+      logDiv.addEventListener('scroll', () => {
+        const atBottom =
+          logDiv.scrollHeight - logDiv.clientHeight - logDiv.scrollTop <= 5;
+        autoScroll = atBottom;
+      });
+    }
     
     if(levelSelect){
       // Select all options by default
