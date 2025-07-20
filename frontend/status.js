@@ -1,12 +1,28 @@
 // Shared status indicator helpers for frontend pages
 
-const dbStatus = document.getElementById('dbStatus');
-const logWriteStatus = document.getElementById('logWriteStatus');
-const logFetchStatus = document.getElementById('logFetchStatus');
-const dataWriteStatus = document.getElementById('dataWriteStatus');
-const dataFetchStatus = document.getElementById('dataFetchStatus');
-const testStatus = document.getElementById('testStatus');
-const startupStatus = document.getElementById('startupStatus');
+let dbStatus, logWriteStatus, logFetchStatus, dataWriteStatus, dataFetchStatus, testStatus, startupStatus;
+
+// Initialize DOM elements when DOM is ready
+function initStatusElements() {
+  console.log('Initializing status elements');
+  dbStatus = document.getElementById('dbStatus');
+  logWriteStatus = document.getElementById('logWriteStatus');
+  logFetchStatus = document.getElementById('logFetchStatus');
+  dataWriteStatus = document.getElementById('dataWriteStatus');
+  dataFetchStatus = document.getElementById('dataFetchStatus');
+  testStatus = document.getElementById('testStatus');
+  startupStatus = document.getElementById('startupStatus');
+  
+  // Set initial status, but only if the elements exist
+  // This allows the page to work even if status indicators aren't present
+  if (dbStatus) setDbStatus(true);
+  if (logWriteStatus) setLogWriteStatus(true);
+  if (logFetchStatus) setLogFetchStatus(true);
+  if (dataWriteStatus) setDataWriteStatus(true);
+  if (dataFetchStatus) setDataFetchStatus(true);
+  if (testStatus) setTestStatus(true);
+  if (startupStatus) setStartupStatus(true);
+}
 
 function tr(key){
   return (typeof t === 'function') ? t(key) : key;
@@ -29,13 +45,12 @@ function setDataFetchStatus(ok, error=''){ setStatus(dataFetchStatus, ok, 'dataF
 function setTestStatus(ok, error=''){ setStatus(testStatus, ok, 'testOkTitle', 'testErrorTitle', error); }
 function setStartupStatus(ok, error=''){ setStatus(startupStatus, ok, 'startupOkTitle', 'startupErrorTitle', error); }
 
-setDbStatus(false);
-setLogWriteStatus(false);
-setLogFetchStatus(false);
-setDataWriteStatus(false);
-setDataFetchStatus(false);
-setTestStatus(false);
-setStartupStatus(false);
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initStatusElements);
+} else {
+  initStatusElements();
+}
 
 function getDeviceId(){
   let id = localStorage.getItem('device_id');
