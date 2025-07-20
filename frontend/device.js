@@ -65,10 +65,10 @@ async function loadDevices() {
       const list = await resp.json();
       const select = document.getElementById('deviceSelect');
       select.innerHTML = list
-        .map(d => `<option value="${d.device_id}">${d.device_id}${d.nickname ? ` (${d.nickname})` : ''}</option>`)
+        .map(d => `<option value="${d.device_id}" selected>${d.device_id}${d.nickname ? ` (${d.nickname})` : ''}</option>`)
         .join('');
       
-      // Do not pre-select devices so all data is shown by default
+      // All devices are now pre-selected to show all data by default
       
       if (typeof frontendLog === 'function') {
         frontendLog(`Loaded ${list.length} devices`, 'INFO', 'DEVICE');

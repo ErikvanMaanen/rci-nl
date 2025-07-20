@@ -3,6 +3,14 @@ let currentLevelFilter = [];
 let currentSourceFilter = [];
 let currentApiFilter =[];
 
+function selectAllOptions(selectElement) {
+  if (selectElement) {
+    Array.from(selectElement.options).forEach(option => {
+      option.selected = true;
+    });
+  }
+}
+
 function fetchLogs(){
   const logDiv = document.getElementById('log');
   if(!logDiv) return;
@@ -14,6 +22,7 @@ function fetchLogs(){
   params.append('limit', '20');
   
   // Add filter parameters if they exist (backend expects comma-separated values)
+  // Only send filter params if not all options are selected (to reduce unnecessary filtering)
   if (currentLevelFilter && currentLevelFilter.length > 0) {
     params.append('level', currentLevelFilter.join(','));
   }
@@ -115,7 +124,10 @@ if (typeof window !== 'undefined') {
     const sourceSelect = document.getElementById('logSourceFilter');
     const apiSelect = document.getElementById('logApiFilter');
     const clearBtn = document.getElementById('clearLogsBtn');
+    
     if(levelSelect){
+      // Select all options by default
+      selectAllOptions(levelSelect);
       const getLevels = () => Array.from(levelSelect.selectedOptions).map(o => o.value).filter(Boolean);
       currentLevelFilter = getLevels();
       levelSelect.addEventListener('change', () => {
@@ -124,6 +136,8 @@ if (typeof window !== 'undefined') {
       });
     }
     if(sourceSelect){
+      // Select all options by default
+      selectAllOptions(sourceSelect);
       const getSources = () => Array.from(sourceSelect.selectedOptions).map(o => o.value).filter(Boolean);
       currentSourceFilter = getSources();
       sourceSelect.addEventListener('change', () => {
@@ -132,6 +146,8 @@ if (typeof window !== 'undefined') {
       });
     }
     if(apiSelect){
+      // Select all options by default
+      selectAllOptions(apiSelect);
       const getApis = () => Array.from(apiSelect.selectedOptions).map(o => o.value).filter(Boolean);
       currentApiFilter = getApis();
       apiSelect.addEventListener('change', () => {
