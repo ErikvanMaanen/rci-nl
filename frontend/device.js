@@ -206,7 +206,10 @@ async function loadNickname() {
     const resp = await fetch(`/api/device/${deviceId}`);
     if (resp.ok) {
       const info = await resp.json();
-      document.getElementById('nicknameInput').value = info.nickname || '';
+      const nicknameInput = document.getElementById('nicknameInput');
+      if (nicknameInput) {
+        nicknameInput.value = info.nickname || '';
+      }
     }
   } catch (e) {
     console.error('Failed to load nickname', e);
@@ -214,7 +217,10 @@ async function loadNickname() {
 }
 
 function saveNickname() {
-  const nickname = document.getElementById('nicknameInput').value;
+  const nicknameInput = document.getElementById('nicknameInput');
+  if (!nicknameInput) return;
+  
+  const nickname = nicknameInput.value;
   fetch('/api/register', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
