@@ -84,7 +84,7 @@
   <div class="log-filters">
     <label for="logLevelFilter">Level:</label>
     <select id="logLevelFilter" multiple>
-      <option value="">All</option>
+      <option value="" selected>All</option>
       <option value="INFO">INFO</option>
       <option value="WARN">WARN</option>
       <option value="ERROR">ERROR</option>
@@ -92,7 +92,7 @@
     </select>
     <label for="logSourceFilter">Source:</label>
     <select id="logSourceFilter" multiple>
-      <option value="">All</option>
+      <option value="" selected>All</option>
       <option value="SERVER">SERVER</option>
       <option value="API">API</option>
       <option value="DATABASE">DATABASE</option>
@@ -112,7 +112,7 @@
   <div id="log" class="log"></div>
   <script src="i18n.js"></script>
   <script src="logs.js"></script>
-  <script src="main.js"></script>
+  <script src="status.js"></script>
   <script src="maintenance.js"></script>
   <script>
     // Load schema status information
