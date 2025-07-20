@@ -498,7 +498,7 @@ async function getLogs(options = {}) {
   request.input('limit', params.limit, params.limitValue);
 
   Object.keys(params).forEach(key => {
-    if (key.endsWith('Value')) return;
+    if (key.endsWith('Value') || key === 'limit' || key === 'limitValue') return;
     const valueKey = key + 'Value';
     if (params[valueKey] !== undefined) {
       request.input(key, params[key], params[valueKey]);

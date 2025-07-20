@@ -1,14 +1,30 @@
-// Track the most recent log timestamp to fetch only newer logs
-let lastLogTimestamp = '';
+// Track current filter settings
+let currentLevelFilter = [];
+let currentSourceFilter = [];
+let currentApiFilter =[];
 
 function fetchLogs(){
   const logDiv = document.getElementById('log');
   if(!logDiv) return;
   
-  // Only fetch logs newer than the last one we've seen
-  const endpoint = lastLogTimestamp 
-    ? `/api/logs?since=${encodeURIComponent(lastLogTimestamp)}` 
-    : '/api/logs?limit=20'; // Initially fetch a reasonable number
+  // Build query parameters
+  const params = new URLSearchParams();
+  
+  // Set a reasonable limit for fetching logs
+  params.append('limit', '20');
+  
+  // Add filter parameters if they exist (backend expects comma-separated values)
+  if (currentLevelFilter && currentLevelFilter.length > 0) {
+    params.append('level', currentLevelFilter.join(','));
+  }
+  if (currentSourceFilter && currentSourceFilter.length > 0) {
+    params.append('source', currentSourceFilter.join(','));
+  }
+  if (currentApiFilter && currentApiFilter.length > 0) {
+    params.append('api', currentApiFilter.join(','));
+  }
+  
+  const endpoint = `/api/logs?${params.toString()}`;
     
   fetch(endpoint)
     .then(r => {
@@ -22,13 +38,7 @@ function fetchLogs(){
         return; // No new logs to display
       }
       
-      // Find the most recent timestamp for subsequent fetches
-      const timestamps = newLogs.map(l => l.log_time).filter(Boolean);
-      if (timestamps.length > 0) {
-        lastLogTimestamp = timestamps.reduce((a, b) => a > b ? a : b);
-      }
-      
-      // Generate HTML for new logs and append to log div
+      // Generate HTML for new logs and replace content in log div
       const newLogHtml = newLogs.map(l => {
         const time = new Date(l.log_time).toLocaleString();
         const levelClass = l.level ? l.level.toLowerCase() : 'info';
@@ -41,17 +51,8 @@ function fetchLogs(){
           `</div>`;
       }).join('');
       
-      // Append new logs rather than replacing all logs
-      const existingLogs = logDiv.innerHTML;
-      logDiv.innerHTML = existingLogs + newLogHtml;
-      
-      // Limit log entries to avoid memory issues (keep latest 100)
-      const entries = logDiv.querySelectorAll('.log-entry');
-      if (entries.length > 100) {
-        for (let i = 0; i < entries.length - 100; i++) {
-          entries[i].remove();
-        }
-      }
+      // Replace all logs with the fetched logs (since we don't have incremental fetching)
+      logDiv.innerHTML = newLogHtml;
       
       // Auto-scroll to bottom
       logDiv.scrollTop = logDiv.scrollHeight;
