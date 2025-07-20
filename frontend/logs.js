@@ -1,20 +1,36 @@
-let currentLevelFilter = [];
-let currentSourceFilter = [];
-let currentApiFilter = [];
+// Track the most recent log timestamp to fetch only newer logs
+let lastLogTimestamp = '';
 
 function fetchLogs(){
   const logDiv = document.getElementById('log');
   if(!logDiv) return;
-  const params = new URLSearchParams();
-  if(currentLevelFilter.length) params.append('level', currentLevelFilter.join(','));
-  if(currentSourceFilter.length) params.append('source', currentSourceFilter.join(','));
-  if(currentApiFilter.length) params.append('api', currentApiFilter.join(','));
-  const query = params.toString() ? `?${params.toString()}` : '';
-  fetch('/api/logs' + query)
-    .then(r => r.json())
-    .then(list => {
-      logDiv.innerHTML = list.map(l => {
-        const time = new Date(l.log_time).toISOString().replace('T',' ').slice(0,19);
+  
+  // Only fetch logs newer than the last one we've seen
+  const endpoint = lastLogTimestamp 
+    ? `/api/logs?since=${encodeURIComponent(lastLogTimestamp)}` 
+    : '/api/logs?limit=20'; // Initially fetch a reasonable number
+    
+  fetch(endpoint)
+    .then(r => {
+      if (!r.ok) {
+        throw new Error(`HTTP error ${r.status}: ${r.statusText}`);
+      }
+      return r.json();
+    })
+    .then(newLogs => {
+      if (!newLogs || !Array.isArray(newLogs) || newLogs.length === 0) {
+        return; // No new logs to display
+      }
+      
+      // Find the most recent timestamp for subsequent fetches
+      const timestamps = newLogs.map(l => l.log_time).filter(Boolean);
+      if (timestamps.length > 0) {
+        lastLogTimestamp = timestamps.reduce((a, b) => a > b ? a : b);
+      }
+      
+      // Generate HTML for new logs and append to log div
+      const newLogHtml = newLogs.map(l => {
+        const time = new Date(l.log_time).toLocaleString();
         const levelClass = l.level ? l.level.toLowerCase() : 'info';
         const source = l.source ? `[${l.source}]` : '';
         return `<div class="log-entry log-${levelClass}">`+
@@ -24,6 +40,20 @@ function fetchLogs(){
           `<span class="log-message">${l.message}</span>`+
           `</div>`;
       }).join('');
+      
+      // Append new logs rather than replacing all logs
+      const existingLogs = logDiv.innerHTML;
+      logDiv.innerHTML = existingLogs + newLogHtml;
+      
+      // Limit log entries to avoid memory issues (keep latest 100)
+      const entries = logDiv.querySelectorAll('.log-entry');
+      if (entries.length > 100) {
+        for (let i = 0; i < entries.length - 100; i++) {
+          entries[i].remove();
+        }
+      }
+      
+      // Auto-scroll to bottom
       logDiv.scrollTop = logDiv.scrollHeight;
       
       // Update log fetch status
@@ -37,6 +67,19 @@ function fetchLogs(){
         setLogFetchStatus(false, err.message);
       }
       
+      // Display the error directly in the log div
+      const errorHtml = `
+        <div class="log-entry log-error">
+          <span class="log-time">${new Date().toLocaleString()}</span>
+          <span class="log-source">[LOG_FETCH]</span>
+          <span class="log-level">[ERROR]</span>
+          <span class="log-message">Failed to fetch logs: ${err.message}</span>
+        </div>`;
+      
+      logDiv.innerHTML += errorHtml;
+      logDiv.scrollTop = logDiv.scrollHeight;
+      
+      // Also log to console/frontend log if available
       if (typeof frontendLog === 'function') {
         frontendLog(`Failed to fetch logs: ${err.message}`, 'ERROR', 'LOG_FETCH');
       } else {
